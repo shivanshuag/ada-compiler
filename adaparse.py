@@ -11,6 +11,55 @@ import ply.yacc as yacc
 # Get the token map
 tokens = adalex.tokens
 
+
+def p_goal_symmbol(t):
+  'goal_symbol : compilation'
+  pass
+
+def p_compilation(t):
+  '''compilation :
+                | compilation comp_unit
+                '''
+  pass
+
+def p_comp_unit(t):
+  '''comp_unit : context_spec private_opt unit
+                | private_opt unit
+                '''
+def p_private_opt(t):
+  '''private_opt :
+                  | PRIVATE
+                  '''
+  pass
+
+def p_context_spec(t):
+  '''context_spec : with_clause use_clause_opt
+                  | context_spec with_clause use_clause_opt
+                  '''
+  pass
+
+def p_with_caluse(t):
+  'with_clause : WITH c_name_list SEMI_COLON'
+  pass
+
+def p_c_name_list(t):
+  '''c_name_list : compound_name
+                  | c_name_list COMMA compound_name
+                  '''
+  pass
+
+def p_use_clause_opt(t):
+  '''use_clause_opt :
+                    | use_clause_opt use_clause
+                    '''
+  pass
+
+def p_unit(t):
+  'unit : subprog_body'
+  pass
+
+
+
 def p_statement_s(t):
   '''statement_s : statement
                  | statement_s statement
@@ -23,7 +72,6 @@ def p_statement(t):
                '''
   pass
 
-#TODO: add LT_LT and GT_GT
 def p_label(t):
   'label : LESS_LESS IDENTIFIER GRE_GRE'
   pass
@@ -168,7 +216,7 @@ def p_alternative(t):
 
 #grammar for loop stmt
 def p_loop_stmt(t):
-  'loop_stmt : label_opt iteration basic_loop id_opt SEMI_COLON'
+  'loop_stmt : iteration basic_loop id_opt SEMI_COLON'
   pass
 
 def p_iteration(t):
@@ -244,7 +292,7 @@ def p_decl_item(t):
                 '''
   pass
 
-#TODO grammar for use_clause
+#grammar for use_clause
 def p_use_clause(t):
   '''use_clause : USE name_s SEMI_COLON
                 | USE TYPE name_s SEMI_COLON
@@ -553,7 +601,7 @@ def p_attribute_id(t):
                   | ACCESS
                   '''
 
-#TODO grammar for body
+#grammar for body
 def p_body(t):
   'body : subprog_body'
   pass
@@ -574,8 +622,13 @@ def p_name(t):
   '''name : simple_name
           | indexed_comp
           | selected_comp
+          | attribute
           | operator_symbol
           '''
+  pass
+
+def p_attribute(t):
+  'attribute : name TICK attribute_id'
   pass
 
 def p_name_opt(t):
@@ -660,17 +713,157 @@ def p_discrete_with_range(t):
                           '''
   pass
 
-#TODO
+
+# def p_qualified(t):
+#   'qualified : '
+#   pass
+
+# def p_simple_expression(t):
+#   'simple_expression :'
+#   pass
+
+#grammar for expression
 def p_expression(t):
-  'expression : '
+  '''expression : relation
+                | expression logical relation
+                | expression short_circuit relation
+                '''
   pass
 
-#TODO
-def p_qualified(t):
-  'qualified : '
+def p_relation(t):
+  '''relation : simple_expression
+              | simple_expression relational simple_expression
+              | simple_expression membership range
+              | simple_expression membership name
+              '''
   pass
 
 def p_simple_expression(t):
-  'simple_expression :'
+  '''simple_expression : unary term
+                       | term
+                       | simple_expression adding term
+                       '''
   pass
-yacc.yacc()
+
+def p_unary(t):
+  '''unary : ADD
+           | SUB
+           '''
+  pass
+
+def p_adding(t):
+  '''adding : ADD
+            | SUB
+            | AMPERSAND
+            '''
+  pass
+
+def p_term(t):
+  '''term : factor
+          | term multiplying factor
+          '''
+  pass
+
+def p_multiplying(t):
+  '''multiplying : MUL
+                 | DIV
+                 | MOD
+                 | REM
+                 '''
+  pass
+
+def p_factor(t):
+  '''factor : primary
+            | NOT primary
+            | ABS primary
+            | primary EXPONENT primary
+            '''
+  pass
+
+def p_primary(t):
+  '''primary : literal
+             | name
+             | allocator
+             | qualified
+             | parenthesized_primary
+             '''
+  pass
+
+def p_parenthesized_primary(t):
+  '''parenthesized_primary : aggregate
+                           | '(' expression ')'
+                           '''
+  pass
+
+def p_qualified (t):
+  '''qualified : name TICK parenthesized_primary
+               '''
+  pass
+
+def p_allocator (t):
+  '''allocator : NEW name 
+               | NEW qualified
+               '''
+  pass
+
+def p_literal(t):
+  '''literal : NUMBER 
+             | used_char
+             | NULL
+             '''
+  pass
+
+def p_aggregate(t):
+  '''aggregate : BRA_OPEN comp_assoc BRA_CLOSE
+               | BRA_OPEN value_s_2 BRA_CLOSE
+               | BRA_OPEN expression WITH value_s BRA_CLOSE
+               | BRA_OPEN expression WITH NULL RECORD
+               | BRA_OPEN NULL RECORD BRA_CLOSE
+               '''
+  pass
+
+def p_value_s_2(t):
+  '''value_s_2 : value COMMA value
+               | value_s_2 COMMA value
+               '''
+  pass
+
+def p_relational(t):
+  '''relational : EQ
+                | NOT_EQ
+                | LESS
+                | GRE
+                | LESS_EQ
+                | GRE_EQ
+                '''
+  pass
+
+def p_membership(t):
+  '''membership : IN
+                | NOT IN
+                '''
+  pass
+
+def p_logical(t):
+  '''logical : AND
+             | OR
+             | XOR
+             '''
+  pass
+
+def p_short_circuit(t):
+  '''short_circuit : AND THEN
+                   | OR ELSE
+                   '''
+  pass
+
+def p_error(t):
+  '''error : '''
+  print 'error on'+str(t)
+
+parser = yacc.yacc()
+
+fileName = sys.argv[1]
+f = open(fileName, 'r')
+result = parser.parse(f.read())
+print result
