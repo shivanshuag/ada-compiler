@@ -328,8 +328,8 @@ def p_object_decl(t):
   'object_decl : def_id_s COLON object_qualifier_opt object_subtype_def init_opt SEMI_COLON'
 #pushing in symbol table 
   for i in t[1]:
-    if i not in table_current.keys():
-        table_current[i[1]] = ['ObjectTy', t.lexer.lineno, t[3], t[4], t[5]]
+    if i not in table_current.symbols.keys():
+        table_current.symbols[i[1]] = ['ObjectTy', t.lexer.lineno, t[3], t[4], t[5]]
     else:
       print 'error : redeclaration of variable ' + i[1] + ' on line number ' + i[0]
   pass
@@ -343,7 +343,7 @@ def p_def_id_s1(t):
 
 def p_def_id_s2(t):
   'def_id_s : def_id_s COMMA def_id'
-  t[0] = t[1].insert((t.lexer.lineno, t[3])
+  t[0] = t[1].insert((t.lexer.lineno, t[3]))
   # global table_current
   # if t[1] not in table_current.keys():
   #   table_current[t[1]] = {'init': 0}
@@ -386,8 +386,8 @@ def p_init_opt2(t):
 def p_number_decl(t):
   'number_decl : def_id_s COLON CONSTANT ASSIGNMENT expression SEMI_COLON'
   for i in t[1]:
-    if i not in table_current.keys():
-        table_current[i[1]] = ['NumTy', t.lexer.lineno, t[5]]
+    if i not in table_current.symbols.keys():
+        table_current.symbols[i[1]] = ['NumTy', t.lexer.lineno, t[5]]
     else:
       print 'error : redeclaration of variable ' + i[1] + ' on line number ' + i[0]
 
@@ -412,7 +412,7 @@ def p_type_def(t):
               | real_type
               | array_type
               '''
-    t[0] = t[1]
+  t[0] = t[1]
   pass
 
 def p_enumeration_type(t):
@@ -515,7 +515,7 @@ def p_aliased_opt(t):
   t[0] = ['NilExp', t.lexer.lineno]
   pass
 
-def p_aliased_opt(t):
+def p_aliased_opt1(t):
   'aliased_opt : ALIASED'
   t[0] = t[1]
   pass
@@ -597,30 +597,30 @@ def p_subprog_decl(t):
 def p_subprog_spec1(t):
   'subprog_spec : PROCEDURE compound_name formal_part_opt'
   if DEBUG : 
-    print 'started procedure ' + t[2]
+    print 'started procedure ' + t[2][3]
   global table_current
   table = symtable(table_current)
-  table_current.symbols[t[2]] = table
+  table_current.symbols[t[2][3]] = table
   table_current = table
   pass
 
 def p_subprog_spec2(t):
   'subprog_spec : FUNCTION designator formal_part_opt RETURN name'
   if DEBUG : 
-    print 'started function ' + t[2]
+    print 'started function ' + t[2][3]
   global table_current
   table = symtable(table_current)
-  table_current.symbols[t[2]] = table
+  table_current.symbols[t[2][3]] = table
   table_current = table
   pass
 
 def p_subprog_spec3(t):
   'subprog_spec : FUNCTION designator'
   if DEBUG : 
-    print 'started function ' + t[2]
+    print 'started function ' + t[2][3]
   global table_current
   table = symtable(table_current)
-  table_current.symbols[t[2]] = table
+  table_current.symbols[t[2][3]] = table  #TODO some problem here
   table_current = table
   pass
 
@@ -711,7 +711,7 @@ def p_subprog_body(t):
 def p_end_subprog(t):
   'end_subprog : END id_opt SEMI_COLON'
   if DEBUG :
-    print 'ended subprogram '+t[2]
+    print 'ended subprogram '+t[2][3]
   global table_current
   table_current = table_current.parent
 
@@ -802,7 +802,7 @@ def p_value_s1(t):
 
 def p_value_s2(t):
   'value_s : value_s COMMA value'
-  t[0] = t[1].extend(t[3])
+  t[0] = t[1].append(t[3])
   pass
 
 def p_value(t):
@@ -812,9 +812,9 @@ def p_value(t):
            '''
   t[0] = t[1]
 
-def p_value(t):
+def p_value1(t):
   'value : error'
-  print 'error in lineno' + t.lexer.lineno
+  print 'error in lineno' + str(t.lexer.lineno)
 
 def p_comp_assoc(t):
   'comp_assoc : choice_s RIGHT_SHAFT expression'
@@ -953,7 +953,7 @@ def p_primary(t):
 def p_parenthesized_primary1(t):
   'parenthesized_primary : aggregate'
   t[0] = ['NotImplemented', t.lexer.lineno, 'Aggregate not implemented']
-  print 'Not Implemented aggregate in line no' + t.lexer.lineno
+  print 'Not Implemented aggregate in line no' + str(t.lexer.lineno)
 
 def p_parenthesized_primary2(t):
   'parenthesized_primary : BRA_OPEN expression BRA_CLOSE'
