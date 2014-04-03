@@ -8,12 +8,15 @@ import sys
 import adalex
 import ply.yacc as yacc
 
+from symbol import symtable
 # Get the token map
 tokens = adalex.tokens
-
-
+#table_prev = NULL
+table_current = symtable(None)
 def p_goal_symmbol(t):
   'goal_symbol : compilation'
+  print 'parsing complete'
+#  print 'lineno.' + str(t.lexer.lineno)
   pass
 
 def p_compilation(t):
@@ -239,16 +242,23 @@ def p_basic_loop(t):
   'basic_loop : LOOP statement_s END LOOP'
   pass
 
-def p_id_opt(t):
-  '''id_opt :
-            | designator
-            '''
+def p_id_opt1(t):
+  'id_opt :'
+  t[0] = ['NilExp', t.lexer.lineno]
   pass
 
-def p_designator(t):
-  '''designator : compound_name
-                | STRING
-                '''
+def p_id_opt2(t):
+  'id_opt : designator'
+  t[0] = t[1]
+  pass
+
+def p_designator1(t):
+  'designator : compound_name'
+  t[0] = t[1]
+
+def p_designator2(t):
+  'designator : STRING'
+  t[0] = ['StringExp', t.lexer.lineno, table_current,t[1]]
   pass
 
 
@@ -316,41 +326,71 @@ def p_decl(t):
 #grammar for object decl
 def p_object_decl(t):
   'object_decl : def_id_s COLON object_qualifier_opt object_subtype_def init_opt SEMI_COLON'
+#pushing in symbol table 
+  for i in t[1]:
+    if i not in table_current.keys():
+        table_current[i[1]] = ['ObjectTy', t.lexer.lineno, t[3], t[4], t[5]]
+    else:
+      print 'error : redeclaration of variable ' + i[1] + ' on line number ' + i[0]
   pass
 
-def p_def_id_s(t):
-  '''def_id_s : def_id
-              | def_id_s COMMA def_id
-              '''
-  pass
+def p_def_id_s1(t):
+  'def_id_s : def_id'
+  t[0] = [(t.lexer.lineno, t[1])]
+  # global table_current
+  # if t[1] not in table_current.keys():
+  #   table_current[t[1]] = {'init': 0}
+
+def p_def_id_s2(t):
+  'def_id_s : def_id_s COMMA def_id'
+  t[0] = t[1].insert((t.lexer.lineno, t[3])
+  # global table_current
+  # if t[1] not in table_current.keys():
+  #   table_current[t[1]] = {'init': 0}
 
 def p_def_id(t):
   'def_id  : IDENTIFIER'
+  t[0] = t[1]
   pass
 
 def p_object_qualifier_opt(t):
-  '''object_qualifier_opt :
-                          | ALIASED
+  'object_qualifier_opt : '
+  t[0] = ""
+
+def p_object_qualifier_opt1(t):
+  ''' object_qualifier_opt : ALIASED
                           | CONSTANT
                           | ALIASED CONSTANT
                           '''
+  t[0] = t[1]
   pass
 
 def p_object_subtype_def(t):
   '''object_subtype_def : subtype_ind
                         | array_type
                         '''
+  t[0] = t[1]
   pass
 
-def p_init_opt(t):
-  '''init_opt :
-              | ASSIGNMENT expression
-              '''
+def p_init_opt1(t):
+  'init_opt : '
+  t[0] = ['NilExp', t.lexer.lineno]
+  pass
+
+def p_init_opt2(t):
+  'init_opt : ASSIGNMENT expression'
+  t[0] = t[2]
   pass
 
 #grammar for number_decl
 def p_number_decl(t):
   'number_decl : def_id_s COLON CONSTANT ASSIGNMENT expression SEMI_COLON'
+  for i in t[1]:
+    if i not in table_current.keys():
+        table_current[i[1]] = ['NumTy', t.lexer.lineno, t[5]]
+    else:
+      print 'error : redeclaration of variable ' + i[1] + ' on line number ' + i[0]
+
   pass
 
 #grammar for type_decl
@@ -372,10 +412,12 @@ def p_type_def(t):
               | real_type
               | array_type
               '''
+    t[0] = t[1]
   pass
 
 def p_enumeration_type(t):
   'enumeration_type : BRA_OPEN enum_id_s BRA_CLOSE'
+  t[0] = ['EnumExp', t[2]]
   pass
 
 def p_enum_id_s(t):
@@ -410,11 +452,15 @@ def p_range_constraint(t):
   'range_constraint : RANGE range'
 
   pass
-def p_range(t):
-  '''range : simple_expression DOT_DOT simple_expression
-          | name TICK RANGE
-          | name TICK RANGE BRA_OPEN expression BRA_CLOSE
-          '''
+def p_range1(t):
+  'range : simple_expression DOT_DOT simple_expression'
+  t[0] = ['OpExp', t.lexer.lineno, t[1], t[2], t[3]]
+
+def p_range2(t):
+  '''range : name TICK RANGE
+           | name TICK RANGE BRA_OPEN expression BRA_CLOSE
+           '''
+  t[0] = t[1]
   pass
 
 def p_real_type(t):
@@ -437,78 +483,106 @@ def p_array_type(t):
   '''array_type : unconstr_array_type
                 | constr_array_type
                 '''
+  t[0] = t[1]
   pass
 
 def p_unconstr_array_type(t):
   'unconstr_array_type : ARRAY BRA_OPEN index_s BRA_CLOSE OF component_subtype_def'
+  t[0] = ['UnconarraydefExp', t.lexer.lineno, t[3], t[6]]
   pass
 
 def p_index_s(t):
-  '''index_s : index
-            | index_s COMMA index
-            '''
+  'index_s : index'
+  t[0] = ['ExpList', t.lexer.lineno, t[1], None]
+  pass
+def p_index_s1(t):
+  'index_s : index_s COMMA index'
+  t[0] = ['ExpList', t.lexer.lineno, t[3], t[1]]
   pass
 
 def p_index(t):
   'index : name RANGE BOX'
+  t[0] = t[1]
   pass
 
 def p_component_subtype_def(t):
   'component_subtype_def : aliased_opt subtype_ind'
+  t[0] = t[2]
   pass
 
 def p_aliased_opt(t):
-  '''aliased_opt : 
-                  | ALIASED
-                  '''
+  'aliased_opt : '
+  t[0] = ['NilExp', t.lexer.lineno]
+  pass
+
+def p_aliased_opt(t):
+  'aliased_opt : ALIASED'
+  t[0] = t[1]
   pass
 
 
 def p_constr_array_type(t):
   'constr_array_type : ARRAY iter_index_constraint OF component_subtype_def'
+  t[0] = ['ConarraydefExp', t.lexer.lineno, t[2], t[4]]
+
   pass
 
 def p_iter_index_constraint(t):
   'iter_index_constraint : BRA_OPEN iter_discrete_range_s BRA_CLOSE'
+  t[0] = t[2]
   pass
 
-def p_iter_discrete_range_s(t):
-  '''iter_discrete_range_s : discrete_range
-                          | iter_discrete_range_s COMMA discrete_range
-                          '''
+def p_iter_discrete_range_s1(t):
+  'iter_discrete_range_s : discrete_range'
+  t[0] = ['ExpList', t.lexer.lineno, t[1]]
+  pass
+def p_iter_discrete_range_s2(t):
+  'iter_discrete_range_s : iter_discrete_range_s COMMA discrete_range'
+  t[0] = ['ExpList', t.lexer.lineno, t[3], t[1]]
   pass
 
 def p_discrete_range(t):
   '''discrete_range : name range_constr_opt
                     | range
                     '''
+  t[0] = t[1]
   pass
 
 #grammar for subtype_decl
 def p_subtype_decl(t):
   'subtype_decl : SUBTYPE IDENTIFIER IS subtype_ind SEMI_COLON'
+
   pass
 
 def p_subtype_ind(t):
-  '''subtype_ind : name constraint
-                  | name
-                  '''
+  'subtype_ind : name constraint'
+  t[0] = ['NameConstr', t.lexer.lineno, t[1], t[2]]
+  pass
+
+def p_subtype_ind1(t):
+  'subtype_ind : name'
+  t[0] = t[1]
   pass
 
 def p_constraint(t):
   '''constraint : range_constraint
                 | decimal_digits_constraint
                 '''
+  t[0] = t[1]
   pass
 
 def p_decimal_digits_constraint(t):
   'decimal_digits_constraint : DIGITS expression range_constr_opt'
+  t[0] = ['DecimalConstr', t.lexer.lineno, t[2], t[3]]
   pass
 
 def p_range_constr_opt(t):
-  '''range_constr_opt :
-                      | range_constraint
-                      '''
+  'range_constr_opt : '
+  t[0] = ['NilExp', t.lexer.lineno]
+  pass
+def p_range_constr_opt1(t):
+  'range_constr_opt : range_constraint'
+  t[0] = t[1]
   pass
 
 
@@ -520,11 +594,34 @@ def p_subprog_decl(t):
                   '''
   pass
 
-def p_subprog_spec(t):
-  '''subprog_spec : PROCEDURE compound_name formal_part_opt
-                  | FUNCTION designator formal_part_opt RETURN name
-                  | FUNCTION designator
-                  '''
+def p_subprog_spec1(t):
+  'subprog_spec : PROCEDURE compound_name formal_part_opt'
+  if DEBUG : 
+    print 'started procedure ' + t[2]
+  global table_current
+  table = symtable(table_current)
+  table_current.symbols[t[2]] = table
+  table_current = table
+  pass
+
+def p_subprog_spec2(t):
+  'subprog_spec : FUNCTION designator formal_part_opt RETURN name'
+  if DEBUG : 
+    print 'started function ' + t[2]
+  global table_current
+  table = symtable(table_current)
+  table_current.symbols[t[2]] = table
+  table_current = table
+  pass
+
+def p_subprog_spec3(t):
+  'subprog_spec : FUNCTION designator'
+  if DEBUG : 
+    print 'started function ' + t[2]
+  global table_current
+  table = symtable(table_current)
+  table_current.symbols[t[2]] = table
+  table_current = table
   pass
 
 def p_formal_part_opt(t):
@@ -607,9 +704,18 @@ def p_body(t):
   pass
 
 def p_subprog_body(t):
-  'subprog_body : subprog_spec IS decl_part block_body END id_opt SEMI_COLON'
+  'subprog_body : subprog_spec IS decl_part block_body end_subprog'
+  #table_current = symtable(NULL)
   pass
 
+def p_end_subprog(t):
+  'end_subprog : END id_opt SEMI_COLON'
+  if DEBUG :
+    print 'ended subprogram '+t[2]
+  global table_current
+  table_current = table_current.parent
+
+  pass
 #grammar for name
 def p_name_s(t):
   '''name_s : name
@@ -625,6 +731,7 @@ def p_name(t):
           | attribute
           | operator_symbol
           '''
+  t[0] = t[1]
   pass
 
 def p_attribute(t):
@@ -639,33 +746,45 @@ def p_name_opt(t):
 
 def p_simple_name(t):
   'simple_name : IDENTIFIER'
+  t[0] = ['StringExp', t.lexer.lineno, table_current, t[1]]
   pass
 
 def p_indexed_comp(t):
   'indexed_comp : name BRA_OPEN value_s BRA_CLOSE'
+  t[0] = ['FuntionUse', t.lexer.lineno, t[1],t[3]]
   pass
 
 
-def p_selected_comp(t):
+def p_selected_comp1(t):
   '''selected_comp : name DOT simple_name
                   | name DOT used_char
                   | name DOT operator_symbol
-                  | name DOT ALL
                   '''
+  t[0] = ['OpExp', t.lexer.lineno, t[1],t[2],t[3]]
+
+def p_selected_comp2(t):
+  'selected_comp : name DOT ALL'
+  t[0] = ['OpExp', t.lexer.lineno, t[1], t[2], ['StringExp', t.lexer.lineno, table_current, "ALL"]]
   pass
 
 def p_used_char(t):
   'used_char : CHARACTER'
+  t[0] = ['StringExp', t.lexer.lineno, table_current, t[1]]
   pass
 
 def p_operator_symbol(t):
   'operator_symbol : STRING'
+  t[0] = ['StringExp', t.lexer.lineno, table_current,t[1]]
   pass
 
-def p_compound_name(t):
-  '''compound_name : simple_name
-                    | compound_name DOT simple_name
-                    '''
+def p_compound_name1(t):
+  'compound_name : simple_name'
+  t[0] = t[1]
+  pass
+
+def p_compound_name2(t):
+  'compound_name : compound_name DOT simple_name'
+  t[0]= ['OpExp',t.lexer.lineno, t[1], t[2], t[3]]
   pass
 
 #
@@ -676,19 +795,26 @@ def p_when_opt(t):
   pass
 
 #grammar for value
-def p_value_s(t):
-  '''value_s : value
-             | value_s COMMA value
-             '''
+def p_value_s1(t):
+  'value_s : value'
+  t[0] = ['ExpList', t[1]]
+  pass
+
+def p_value_s2(t):
+  'value_s : value_s COMMA value'
+  t[0] = t[1].extend(t[3])
   pass
 
 def p_value(t):
   '''value : expression
            | comp_assoc
            | discrete_with_range
-           | error
            '''
-  pass
+  t[0] = t[1]
+
+def p_value(t):
+  'value : error'
+  print 'error in lineno' + t.lexer.lineno
 
 def p_comp_assoc(t):
   'comp_assoc : choice_s RIGHT_SHAFT expression'
@@ -707,10 +833,12 @@ def p_choice(t):
             '''
   pass
 
-def p_discrete_with_range(t):
-  '''discrete_with_range : name range_constraint
-                          | range
-                          '''
+def p_discrete_with_range1(t):
+  'discrete_with_range : name range_constraint'
+  t[0] = t[1]
+def p_discrete_with_range2(t):
+  'discrete_with_range : range'
+  t[0] = t[1]
   pass
 
 
@@ -723,32 +851,51 @@ def p_discrete_with_range(t):
 #   pass
 
 #grammar for expression
-def p_expression(t):
-  '''expression : relation
-                | expression logical relation
-                | expression short_circuit relation
-                '''
+def p_expression1(t):
+  'expression : relation'
+  t[0] = t[1]
   pass
 
-def p_relation(t):
-  '''relation : simple_expression
-              | simple_expression relational simple_expression
+def p_expression2(t):
+  '''expression : expression logical relation
+                | expression short_circuit relation
+                '''
+  t[0] = ['OpExp', t.lexer.lineno, t[1], t[2], t[3]]
+  #print str(t)
+  pass
+
+def p_relation1(t):
+  'relation : simple_expression'
+  t[0] = t[1]
+
+def p_relation2(t):
+  '''realtion : simple_expression relational simple_expression
               | simple_expression membership range
               | simple_expression membership name
               '''
+  t[0] = ['OpExp', t.lexer.lineno, t[1], t[2], t[3]]
   pass
 
-def p_simple_expression(t):
-  '''simple_expression : unary term
-                       | term
-                       | simple_expression adding term
-                       '''
+def p_simple_expression1(t):
+  'simple_expression : unary term'
+  t[0] = ['UnaryOpExp', t.lexer.lineno, t[1], t[2]]
+  pass
+
+def p_simple_expression2(t):
+  'simple_expression : term'
+  t[0] = t[1]
+  pass
+
+def p_simple_expression3(t):
+  'simple_expression : simple_expression adding term'
+  t[0] = ['OpExp', t.lexer.lineno, t[1], t[2], t[3]]
   pass
 
 def p_unary(t):
   '''unary : ADD
            | SUB
            '''
+  t[0] = ['UnaryOp',t[1]]
   pass
 
 def p_adding(t):
@@ -756,12 +903,17 @@ def p_adding(t):
             | SUB
             | AMPERSAND
             '''
+  t[0] = ['AddBinaryOp',t[1]]
   pass
 
-def p_term(t):
-  '''term : factor
-          | term multiplying factor
-          '''
+def p_term1(t):
+  'term : factor'
+  t[0] = t[1]
+  pass
+
+def p_term2(t):
+  'term : term multiplying factor'
+  t[0] = ['OpExp', t.lexer.lineno, t[1], t[2], t[3]]
   pass
 
 def p_multiplying(t):
@@ -770,34 +922,47 @@ def p_multiplying(t):
                  | MOD
                  | REM
                  '''
+  t[0] = ['MultBinaryOp', t[1]]
   pass
 
-def p_factor(t):
-  '''factor : primary
-            | NOT primary
+def p_factor1(t):
+  'factor : primary'
+  pass
+def p_factor2(t):
+  '''factor : NOT primary
             | ABS primary
-            | primary EXPONENT primary
             '''
+  t[0] = ['UnaryOpExp', t.lexer.lineno, t[1], t[2]]
+
+def p_factor3(t):
+  'factor : primary EXPONENT primary'
+  t[0] = ['OpExp', t.lexer.lineno, t[1], t[2], t[3]]
   pass
 
 def p_primary(t):
+  #Allocator not implemented
   '''primary : literal
              | name
              | allocator
              | qualified
              | parenthesized_primary
              '''
+  t[0] = t[1]
   pass
 
-def p_parenthesized_primary(t):
-  '''parenthesized_primary : aggregate
-                           | '(' expression ')'
-                           '''
+def p_parenthesized_primary1(t):
+  'parenthesized_primary : aggregate'
+  t[0] = ['NotImplemented', t.lexer.lineno, 'Aggregate not implemented']
+  print 'Not Implemented aggregate in line no' + t.lexer.lineno
+
+def p_parenthesized_primary2(t):
+  'parenthesized_primary : BRA_OPEN expression BRA_CLOSE'
+  t[0] = t[1]
   pass
 
 def p_qualified (t):
-  '''qualified : name TICK parenthesized_primary
-               '''
+  'qualified : name TICK parenthesized_primary'
+  t[0] = ['OpExp', t.lexer.lineno, t[1], t[2], t[3]]
   pass
 
 def p_allocator (t):
@@ -806,11 +971,17 @@ def p_allocator (t):
                '''
   pass
 
-def p_literal(t):
-  '''literal : NUMBER 
-             | used_char
-             | NULL
-             '''
+def p_literal1(t):
+  'literal : NUMBER '
+  t[0] = ['NumberExp', t.lexer.lineno, t[1]]
+
+def p_literal2(t):
+  'literal : used_char'
+  t[0] = t[1]
+
+def p_literal3(t):
+  'literal : NULL'
+  t[0] = ['NullExp', t.lexer.lineno, t[1]] 
   pass
 
 def p_aggregate(t):
@@ -836,25 +1007,29 @@ def p_relational(t):
                 | LESS_EQ
                 | GRE_EQ
                 '''
+  t[0] = t[1]
   pass
 
-def p_membership(t):
-  '''membership : IN
-                | NOT IN
-                '''
-  pass
+def p_membership1(t):
+  'membership : IN'
+  t[0] = t[1]
+
+def p_membership2(t):
+  'membership : NOT IN'
+  t[0] = t[1]+' '+t[2]
 
 def p_logical(t):
   '''logical : AND
              | OR
              | XOR
              '''
-  pass
+  t[0] = t[1]
 
 def p_short_circuit(t):
   '''short_circuit : AND THEN
                    | OR ELSE
                    '''
+  t[0] = t[1]
   pass
 
 def p_error(t):
@@ -864,6 +1039,9 @@ def p_error(t):
 parser = yacc.yacc()
 
 fileName = sys.argv[1]
+DEBUG = 0
+if(len(sys.argv) > 2):
+  DEBUG = 1
 f = open(fileName, 'r')
 result = parser.parse(f.read())
 print result

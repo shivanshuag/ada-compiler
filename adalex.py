@@ -20,6 +20,7 @@ base_number = r'(' + numeral + r'\#(' + hex_numeral + r')(\.(' + hex_numeral + r
 number = r'(' + decimal + r'|' + base_number + r'|' + exponent + r')'
 character = r'\'.\''
 string = r'\"((\"\")|[^\"])*\"'
+comment = r'--[^\n]*'
 #comment = r'--[^\n]*'
 tokens = (
   #reserved words
@@ -201,12 +202,12 @@ reserved = {
   'WITH':'WITH',
   'XOR':'XOR'
 }
-t_DIV = r'\\'
+t_DIV = r'\/'
 t_MUL = r'\*'
 t_ADD = r'\+'
 t_SUB = r'-'
 t_ASSIGNMENT = r':='
-t_NOT_EQ = r'/='
+t_NOT_EQ = r'\/='
 t_GRE_EQ = r'>='
 t_LESS_EQ = r'<='
 #t_GRE_EQ = r'>='
@@ -226,7 +227,6 @@ t_DOT = r'\.'
 t_COLON = r':'
 t_SEMI_COLON = r';'
 t_DOT_DOT = '\.\.'
-t_COMMENT = r'--[^\n]*'
 t_TICK = r'\''
 #t_IDENTIFIER  
 #t_NUMBER
@@ -257,9 +257,9 @@ def t_STRING(t):
   t.value = t.value.upper()
   return t
 
-#@TOKEN(comment)
-#def t_COMMENT(t):
-  # t.value = t.value.upper()
+@TOKEN(comment)
+def t_COMMENT(t):
+  pass
 
 def t_NEWLINE(t):
   r'\n+'
@@ -270,6 +270,7 @@ t_ignore  = ' \t'
 
 def t_error(t):
   print("Illegal character %s" % repr(t.value[0]))
+  print "on line no. "+str(t.lexer.lineno)
   t.lexer.skip(1)
 
 lexer = lex.lex();
