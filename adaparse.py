@@ -927,6 +927,7 @@ def p_multiplying(t):
 
 def p_factor1(t):
   'factor : primary'
+  t[0] = t[1]
   pass
 def p_factor2(t):
   '''factor : NOT primary
