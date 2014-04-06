@@ -9,10 +9,15 @@ import adalex
 import ply.yacc as yacc
 
 from symbol import symtable
+from type import *
 # Get the token map
 tokens = adalex.tokens
 #table_prev = NULL
 table_current = symtable(None)
+
+types_declared = []
+subtypes_declared = []
+
 def p_goal_symmbol(t):
   'goal_symbol : compilation'
   print 'parsing complete'
@@ -297,9 +302,11 @@ def p_decl_item_or_body(t):
 
 def p_decl_item(t):
   #rep_spec not implemented
-  '''decl_item : decl
-                | use_clause
-                '''
+  'decl_item : decl'
+
+def p_decl_item1(t):
+  'decl_item : use_clause'
+  print 'error: not implemented use clause in declaration in line number'+ t.lexer.lineno
   pass
 
 #grammar for use_clause
@@ -326,13 +333,28 @@ def p_decl(t):
 #grammar for object decl
 def p_object_decl(t):
   'object_decl : def_id_s COLON object_qualifier_opt object_subtype_def init_opt SEMI_COLON'
-#pushing in symbol table 
+#pushing in symbol table
+  if DEBUG :
+    print table_current.symbols.keys() 
   for i in t[1]:
-    if i not in table_current.symbols.keys():
-        table_current.symbols[i[1]] = ['ObjectTy', t.lexer.lineno, t[3], t[4], t[5]]
+    if i[1] not in table_current.symbols.keys():
+        if DEBUG :
+          print 'adding symbol '+ i[1]
+        if t[4][0] == 'StringExp':
+          if t[4][4] == 'INTEGER':
+            table_current.symbols[i[1]] = ['ObjectTy', Integer(None), t.lexer.lineno, t[3], t[4], t[5]]
+          elif t[4][4] == 'CHARACTER':
+            table_current.symbols[i[1]] = ['ObjectTy', Character(None), t.lexer.lineno, t[3], t[4], t[5]]
+          elif t[4][4] == 'BOOLEAN':
+            table_current.symbols[i[1]] = ['ObjectTy', Boolean(None), t.lexer.lineno, t[3], t[4], t[5]]
+          elif t[4][4] == 'FLOAT':
+            table_current.symbols[i[1]] = ['ObjectTy', Float(None), t.lexer.lineno, t[3], t[4], t[5]]
+        elif t[4][0] == 'ConarraydefExp' :
+          #TODO array constraint can be a name of a type
+          #TODO make ranges of the class declared in type.py. Currently range is given as ast of the subtree
+          table_current.symbols[i[1]] = ['ObjectTy', Array(t[4][4][4], t[4][3]), t.lexer.lineno, t[3], t[4], t[5]]
     else:
-      print 'error : redeclaration of variable ' + i[1] + ' on line number ' + i[0]
-  pass
+      print 'error : redeclaration of variable ' + i[1] + ' on line number ' + str(i[0])
 
 def p_def_id_s1(t):
   'def_id_s : def_id'
@@ -450,7 +472,7 @@ def p_range_spec(t):
 
 def p_range_constraint(t):
   'range_constraint : RANGE range'
-
+  t[0] = t[2]
   pass
 def p_range1(t):
   'range : simple_expression DOT_DOT simple_expression'
@@ -523,7 +545,7 @@ def p_aliased_opt1(t):
 
 def p_constr_array_type(t):
   'constr_array_type : ARRAY iter_index_constraint OF component_subtype_def'
-  t[0] = ['ConarraydefExp', t.lexer.lineno, t[2], t[4]]
+  t[0] = ['ConarraydefExp', Nill(), t.lexer.lineno, t[2], t[4]]
 
   pass
 
@@ -553,9 +575,11 @@ def p_subtype_decl(t):
   'subtype_decl : SUBTYPE IDENTIFIER IS subtype_ind SEMI_COLON'
 
   pass
+  t[0] = ['NameConstr', t.lexer.lineno, t[1], t[2]]
 
 def p_subtype_ind(t):
   'subtype_ind : name constraint'
+  print "Not implemented constraint in declaration"
   t[0] = ['NameConstr', t.lexer.lineno, t[1], t[2]]
   pass
 
@@ -746,12 +770,14 @@ def p_name_opt(t):
 
 def p_simple_name(t):
   'simple_name : IDENTIFIER'
-  t[0] = ['StringExp', t.lexer.lineno, table_current, t[1]]
+  #TODO find where use before declaration error is to be given
+  t[0] = ['StringExp', Nill(), t.lexer.lineno, table_current, t[1]]
   pass
 
 def p_indexed_comp(t):
   'indexed_comp : name BRA_OPEN value_s BRA_CLOSE'
-  t[0] = ['FuntionUse', t.lexer.lineno, t[1],t[3]]
+  #TODO add suitable type information here
+  t[0] = ['FuntionUse', Nill(), t.lexer.lineno, t[1],t[3]]
   pass
 
 
@@ -760,21 +786,21 @@ def p_selected_comp1(t):
                   | name DOT used_char
                   | name DOT operator_symbol
                   '''
-  t[0] = ['OpExp', t.lexer.lineno, t[1],t[2],t[3]]
+  t[0] = ['OpExp', Nill() ,t.lexer.lineno, t[1],t[2],t[3]]
 
 def p_selected_comp2(t):
   'selected_comp : name DOT ALL'
-  t[0] = ['OpExp', t.lexer.lineno, t[1], t[2], ['StringExp', t.lexer.lineno, table_current, "ALL"]]
+  t[0] = ['OpExp', Nill(), t.lexer.lineno, t[1], t[2], ['StringExp', t.lexer.lineno, table_current, "ALL"]]
   pass
 
 def p_used_char(t):
   'used_char : CHARACTER'
-  t[0] = ['StringExp', t.lexer.lineno, table_current, t[1]]
+  t[0] = ['StringExp', Character(t[1]), t.lexer.lineno, table_current, t[1]]
   pass
 
 def p_operator_symbol(t):
   'operator_symbol : STRING'
-  t[0] = ['StringExp', t.lexer.lineno, table_current,t[1]]
+  t[0] = ['StringExp', String(t[1]), t.lexer.lineno, table_current,t[1]]
   pass
 
 def p_compound_name1(t):
@@ -860,9 +886,11 @@ def p_expression2(t):
   '''expression : expression logical relation
                 | expression short_circuit relation
                 '''
-  t[0] = ['OpExp', t.lexer.lineno, t[1], t[2], t[3]]
-  #print str(t)
-  pass
+  if(t[1][1].name != "Boolean"):
+    print 'error on line number '+str(t.lexer.lineno)+': type should be boolean'
+  if(t[3][1].name != "Boolean"):
+    print 'error on line number '+str(t.lexer.lineno)+': type should be boolean'
+  t[0] = ['OpExp', t[1][1], t.lexer.lineno, t[1], t[2], t[3]]
 
 def p_relation1(t):
   'relation : simple_expression'
@@ -871,14 +899,20 @@ def p_relation1(t):
 def p_relation2(t):
   '''realtion : simple_expression relational simple_expression
               | simple_expression membership range
-              | simple_expression membership name
               '''
-  t[0] = ['OpExp', t.lexer.lineno, t[1], t[2], t[3]]
-  pass
+  if(t[1][1].name != t[3][1].name):
+    print 'type error on line number '+str(t.lexer.lineno)+': incompatible types'
+  t[0] = ['OpExp', Boolean(None), t.lexer.lineno, t[1], t[2], t[3]]
+
+def p_relation3(t):
+  'relation : simple_expression membership name'
+  #TODO check name should be subtype and type checking
+  t[0] = ['OpExp', Boolean(None), t.lexer.lineno, t[1], t[2], t[3]]
+
 
 def p_simple_expression1(t):
   'simple_expression : unary term'
-  t[0] = ['UnaryOpExp', t.lexer.lineno, t[1], t[2]]
+  t[0] = ['UnaryOpExp', t[2][1], t.lexer.lineno, t[1], t[2]]
   pass
 
 def p_simple_expression2(t):
@@ -888,7 +922,14 @@ def p_simple_expression2(t):
 
 def p_simple_expression3(t):
   'simple_expression : simple_expression adding term'
-  t[0] = ['OpExp', t.lexer.lineno, t[1], t[2], t[3]]
+  if(t[1][1].name != t[3][1].name):
+    print "type error on line number "+str(t.lexer.lineno)+": incompatible types "+t[1][1].name+"and "+t[3][1].name
+  if(t[1][1].name != "Integer" or t[1][1].name != "Float"):
+    print "type error on line number "+str(t.lexer.lineno)+": type should be either Integer or Float"
+  if(t[3][1].name != "Integer" or t[3][1].name != "Float"):
+    print "type error on line number "+str(t.lexer.lineno)+": type should be either Integer or Float"
+
+  t[0] = ['OpExp', t[1][1], t.lexer.lineno, t[1], t[2], t[3]]
   pass
 
 def p_unary(t):
@@ -913,7 +954,14 @@ def p_term1(t):
 
 def p_term2(t):
   'term : term multiplying factor'
-  t[0] = ['OpExp', t.lexer.lineno, t[1], t[2], t[3]]
+  if(t[1][1].name != t[3][1].name):
+    print "type error on line number "+str(t.lexer.lineno)+": incompatible types "+t[1][1].name+"and "+t[3][1].name
+  if(t[1][1].name != "Integer" or t[1][1].name != "Float"):
+    print "type error on line number "+str(t.lexer.lineno)+": type should be either Integer or Float"
+  if(t[3][1].name != "Integer" or t[3][1].name != "Float"):
+    print "type error on line number "+str(t.lexer.lineno)+": type should be either Integer or Float"
+
+  t[0] = ['OpExp', t[1][1], t.lexer.lineno, t[1], t[2], t[3]]
   pass
 
 def p_multiplying(t):
@@ -933,21 +981,39 @@ def p_factor2(t):
   '''factor : NOT primary
             | ABS primary
             '''
-  t[0] = ['UnaryOpExp', t.lexer.lineno, t[1], t[2]]
+  if(t[2][1].name != "Boolean"):
+    print "type error on line number "+str(t.lexer.lineno)+": type should be Boolean"
+  t[0] = ['UnaryOpExp', t[2][1], t.lexer.lineno, t[1], t[2]]
 
 def p_factor3(t):
   'factor : primary EXPONENT primary'
-  t[0] = ['OpExp', t.lexer.lineno, t[1], t[2], t[3]]
+  if(t[1][1].name != t[3][1].name):
+    print "type error on line number "+str(t.lexer.lineno)+": incompatible types "+t[1][1].name+"and "+t[3][1].name
+  if(t[1][1].name != "Integer" or t[1][1].name != "Float"):
+    print "type error on line number "+str(t.lexer.lineno)+": type should be either Integer or Float"
+  if(t[3][1].name != "Integer" or t[3][1].name != "Float"):
+    print "type error on line number "+str(t.lexer.lineno)+": type should be either Integer or Float"
+
+  t[0] = ['OpExp', t[1][1], t.lexer.lineno, t[1], t[2], t[3]]
   pass
 
-def p_primary(t):
+def p_primary1(t):
   #Allocator not implemented
   '''primary : literal
-             | name
+            | parenthesized_primary
+            '''
+  t[0] = t[1]
+
+def p_primary2(t):
+  #Allocator not implemented
+  '''primary : name
              | allocator
              | qualified
-             | parenthesized_primary
              '''
+  if t[1][0] == 'StringExp':
+    identifier = table_current.lookup(t[1][4])
+    if(identifier == None):
+      print 'error on line number '+str(t.lexer.lineno)+': identifier '+t[1][4]+'used before declaration'
   t[0] = t[1]
   pass
 
@@ -974,7 +1040,10 @@ def p_allocator (t):
 
 def p_literal1(t):
   'literal : NUMBER '
-  t[0] = ['NumberExp', t.lexer.lineno, t[1]]
+  if(t[1].find('.') == -1):
+    t[0] = ['NumberExp', Integer(t[1]), t.lexer.lineno, t[1]]
+  else:
+    t[0] = ['NumberExp', Float(t[1]), t.lexer.lineno, t[1]]
 
 def p_literal2(t):
   'literal : used_char'
@@ -982,7 +1051,7 @@ def p_literal2(t):
 
 def p_literal3(t):
   'literal : NULL'
-  t[0] = ['NullExp', t.lexer.lineno, t[1]] 
+  t[0] = ['NullExp', Null(), t.lexer.lineno, t[1]] 
   pass
 
 def p_aggregate(t):

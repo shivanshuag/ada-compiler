@@ -5,7 +5,15 @@
 # -----------------------------------------------------------------------------
 
 class symtable():
-	parent = {}
+	
 	def __init__(self, parentDict):
 		self.parent = parentDict
-	symbols = {}
+		self.symbols = {}
+
+	def lookup(self, name):
+		table = self
+		while table.parent != None:
+			if name in table.symbols.keys():
+				return table[name]
+			table = table.parent
+		return None	
