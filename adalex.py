@@ -4,6 +4,7 @@
 # Token rules for ada programming language
 # 
 # ------------------------------------------------------------
+import sys
 import ply.lex as lex
 from ply.lex import TOKEN
 
@@ -273,15 +274,18 @@ def t_error(t):
   print "on line no. "+str(t.lexer.lineno)
   t.lexer.skip(1)
 
-lexer = lex.lex();
-# # Give the lexer some input
-# lexer.input(data)
+def make_lexer():
+  return lex.lex();
 
-# # Tokenize
-# while True:
-#   tok = lexer.token()
-#   if not tok: break      # No more input
-#   print tok
+def main():
+  fileName = sys.argv[1]
+  f = open(fileName, 'r')
+  lexer = make_lexer()
+  lexer.input(f.read())
+  while True:
+    tok = lexer.token()
+    if not tok: break      # No more input
+    print tok
 
-  
-
+if __name__ == "__main__":
+    main()

@@ -2,6 +2,7 @@ with Text_IO;
 with Gnat.Io; use Gnat.Io;
 procedure Example is
 	type Day_Type is (Sun, Mon, Tue, Wed, Thu, Fri, Sat);
+	vari : Integer;
 	Work_Hours : array(Day_Type) of Natural;
 	function Adjust_Overtime
 		(Day : Day_Type; Hours : Natural) return Natural is
@@ -9,11 +10,13 @@ procedure Example is
 		begin
 			Put("123");
 		end abc;
+
 	begin
 		Work_Hours(Day) := 12;
 	end Adjust_Overtime;
+		vari : Integer;
 begin
-	Work_Hours := (0, 8, 8, 8, 8, 0);
+	-- Work_Hours := (0, 8, 8, 8, 8, 0);
 	for Day in Day_Type loop
 		Work_Hours(Day) := Adjust_Overtime(Day, Work_Hours(Day));
 	end loop;

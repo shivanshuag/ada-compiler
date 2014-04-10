@@ -9,10 +9,7 @@ import adalex
 import ply.yacc as yacc
 
 from symbol import symtable
-from type import *
-# Get the token map
-tokens = adalex.tokens
-#table_prev = NULL
+
 table_current = symtable(None)
 
 types_declared = []
@@ -20,41 +17,51 @@ subtypes_declared = []
 
 def p_goal_symmbol(t):
   'goal_symbol : compilation'
+  t[0] = goal_symbol(t[1], lineno=t.lexer.lineno)
   print 'parsing complete'
-#  print 'lineno.' + str(t.lexer.lineno)
+
+
+def p_compilation1(t):
+  'compilation : '
+  t[0] = compilation([])
+
+def p_compilation2(t):
+  'compilation : compilation comp_unit'
+  t[0] = t[1]
+  t[0].new_comp_unit(t[2])
   pass
 
-def p_compilation(t):
-  '''compilation :
-                | compilation comp_unit
-                '''
-  pass
+def p_comp_unit1(t):
+  'comp_unit : context_spec private_opt unit'
+  t[0] = t[3]
 
-def p_comp_unit(t):
-  '''comp_unit : context_spec private_opt unit
-                | private_opt unit
-                '''
+def p_comp_unit2(t):
+  'comp_unit : private_opt unit'
+  t[0] = t[2]
+
 def p_private_opt(t):
   '''private_opt :
                   | PRIVATE
                   '''
-  pass
+  
 
-def p_context_spec(t):
-  '''context_spec : with_clause use_clause_opt
-                  | context_spec with_clause use_clause_opt
-                  '''
-  pass
+def p_context_spec1(t):
+  'context_spec : with_clause use_clause_opt'
+  # t[0] = context_spec(t[1], t[2])
+
+def p_context_spec2(t):
+  'context_spec : context_spec with_clause use_clause_opt'
+  # t[0] = t[1]
+  # t[1].new_context_spec(t[2], t[3])
 
 def p_with_caluse(t):
   'with_clause : WITH c_name_list SEMI_COLON'
-  pass
+  # t[0] = package_with(t[2])
 
 def p_c_name_list(t):
   '''c_name_list : compound_name
                   | c_name_list COMMA compound_name
                   '''
-  pass
 
 def p_use_clause_opt(t):
   '''use_clause_opt :
@@ -64,7 +71,7 @@ def p_use_clause_opt(t):
 
 def p_unit(t):
   'unit : subprog_body'
-  pass
+  t[0] = t[1]
 
 
 
@@ -263,8 +270,7 @@ def p_designator1(t):
 
 def p_designator2(t):
   'designator : STRING'
-  t[0] = ['StringExp', t.lexer.lineno, table_current,t[1]]
-  pass
+  t[0] = t[1]
 
 
 #grammar for block
@@ -358,14 +364,14 @@ def p_object_decl(t):
 
 def p_def_id_s1(t):
   'def_id_s : def_id'
-  t[0] = [(t.lexer.lineno, t[1])]
+  t[0] =  [t[1]]
   # global table_current
   # if t[1] not in table_current.keys():
   #   table_current[t[1]] = {'init': 0}
 
 def p_def_id_s2(t):
   'def_id_s : def_id_s COMMA def_id'
-  t[0] = t[1].insert((t.lexer.lineno, t[3]))
+  t[0] = t[1] + [t[3]]
   # global table_current
   # if t[1] not in table_current.keys():
   #   table_current[t[1]] = {'init': 0}
@@ -621,53 +627,65 @@ def p_subprog_decl(t):
 def p_subprog_spec1(t):
   'subprog_spec : PROCEDURE compound_name formal_part_opt'
   if DEBUG : 
-    print 'started procedure ' + t[2][3]
+    print 'started procedure ' + t[2]
+  #create new symbol table for new scope
   global table_current
   table = symtable(table_current)
-  table_current.symbols[t[2][3]] = table
+  table_current.symbols[t[2]] = table
   table_current = table
-  pass
+
+  t[0] = (t[2],None,t[3])
 
 def p_subprog_spec2(t):
   'subprog_spec : FUNCTION designator formal_part_opt RETURN name'
   if DEBUG : 
-    print 'started function ' + t[2][3]
+    print 'started function ' + t[2]
   global table_current
   table = symtable(table_current)
-  table_current.symbols[t[2][3]] = table
+  table_current.symbols[t[2]] = table
   table_current = table
-  pass
+  t[0] = (t[2],Typename(t[5], lineno=t.lexer.lineno),t[3])
 
 def p_subprog_spec3(t):
   'subprog_spec : FUNCTION designator'
   if DEBUG : 
-    print 'started function ' + t[2][3]
+    print 'started function ' + t[2]
   global table_current
   table = symtable(table_current)
-  table_current.symbols[t[2][3]] = table  #TODO some problem here
+  table_current.symbols[t[2]] = table
   table_current = table
-  pass
+  t[0] = (t[2],None,None)
 
-def p_formal_part_opt(t):
-  '''formal_part_opt : 
-                      | formal_part
-                      '''
-  pass
+
+def p_formal_part_opt1(t):
+  'formal_part_opt : '
+  t[0] = None
+
+def p_formal_part_opt2(t):
+  'formal_part_opt : formal_part'
+  t[0] = t[1]
 
 def p_formal_part(t):
   'formal_part : BRA_OPEN param_s BRA_CLOSE'
-  pass
+  t[0] = t[2]
 
 def p_param_s(t):
-  '''param_s : param
-              | param_s SEMI_COLON param
-              '''
-  pass
+  'param_s : param'
+  t[0] = FuncParameterList(t[1], lineno = t.lexer.lineno)
 
-def p_param(t):
-  '''param : def_id_s COLON mode mark init_opt
-            | error
-            '''
+def p_param_s(t):
+  'param_s : param_s SEMI_COLON param'
+  t[0] = t[1]
+  t[0].new_parameter(t[3])
+
+def p_param1(t):
+  'param : def_id_s COLON mode mark init_opt'
+  t[0] = []
+  for identifier in t[1] :
+    t[0] = t[0]+[FuncParameter(identifier,p[4],p[5],None, lineno=t.lexer.lineno)]
+
+def p_param2(t):
+  'param : error'
   pass
 
 def p_mode(t):
@@ -709,11 +727,15 @@ def p_mode(t):
 #   pass
 
 def p_mark(t):
-  '''mark : simple_name
-          | mark TICK attribute_id
+  'mark : simple_name'
+  t[0] = Typename(t[1], lineno=t.lexer.lineno)
+
+def p_mark1(t):
+  '''mark : mark TICK attribute_id
           | mark DOT simple_name
           '''
-  pass
+  t[0] = Typename(t[1], lineno=t.lexer.lineno)
+
 
 def p_attribute_id(t):
   '''attribute_id : IDENTIFIER
@@ -770,9 +792,7 @@ def p_name_opt(t):
 
 def p_simple_name(t):
   'simple_name : IDENTIFIER'
-  #TODO find where use before declaration error is to be given
-  t[0] = ['StringExp', Nill(), t.lexer.lineno, table_current, t[1]]
-  pass
+  t[0] = t[1]
 
 def p_indexed_comp(t):
   'indexed_comp : name BRA_OPEN value_s BRA_CLOSE'
@@ -810,7 +830,7 @@ def p_compound_name1(t):
 
 def p_compound_name2(t):
   'compound_name : compound_name DOT simple_name'
-  t[0]= ['OpExp',t.lexer.lineno, t[1], t[2], t[3]]
+  t[0]= t[1]+t[2]+t[3]
   pass
 
 #
@@ -1106,12 +1126,22 @@ def p_error(t):
   '''error : '''
   print 'error on'+str(t)
 
-parser = yacc.yacc()
 
-fileName = sys.argv[1]
+def make_parser():
+  return yacc.yacc()
+
+def main():
+  global DEBUG
+  fileName = sys.argv[1]
+  if(len(sys.argv) > 2):
+    DEBUG = 1
+  f = open(fileName, 'r')
+  parser = make_parser()
+  result = parser.parse(f.read())
+
 DEBUG = 0
-if(len(sys.argv) > 2):
-  DEBUG = 1
-f = open(fileName, 'r')
-result = parser.parse(f.read())
-print result
+lexer = adalex.make_lexer()
+tokens = adalex.tokens
+
+if __name__ == "__main__":
+    main()
