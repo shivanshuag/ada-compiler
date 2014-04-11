@@ -5,13 +5,13 @@
 # -----------------------------------------------------------------------------
 
 class ast():
-	def __init__(self,*args,**kwargs):
-		field_tuples = zip(self.fields, args)
-		#For each of the field in the respective subclass, we create object properties 
-		for field,value in field_tuples:
-			setattr(self, field, value)
-		for name,value in kwargs.items():
-            setattr(self,name,value)
+  def __init__(self,*args,**kwargs):
+    field_tuples = zip(self.fields, args)
+    #For each of the field in the respective subclass, we create object properties 
+    for field,value in field_tuples:
+      setattr(self, field, value)
+    for name,value in kwargs.items():
+      setattr(self,name,value)
 
 
 #All the classes below inherit the ast class. Each class defines a list of fields for the ast node.
@@ -22,25 +22,25 @@ class goal_symbol(ast):
 class compilation(ast):
     fields = ['comp_unit']
     def new_comp_unit(self,unit):
-		self.comp_unit.append(unit)
+      self.comp_unit.append(unit)
 
     # def len(self):
     #     return len(self.program)
 
 # class comp_unit(ast):
-# 	fields = ['context_spec', 'unit']
+#   fields = ['context_spec', 'unit']
 
 # class context_spec(ast):
-# 	fields = ['package_with', 'package_use']
-# 	def new_context_spec(self, package_with, package_use):
-# 		self.package_with.append(package_with)
-# 		self.package_use.append(package_use)
+#   fields = ['package_with', 'package_use']
+#   def new_context_spec(self, package_with, package_use):
+#     self.package_with.append(package_with)
+#     self.package_use.append(package_use)
 
 # class package_with(ast):
-# 	fields = ['name']
+#   fields = ['name']
 
 # class package_use(ast):
-# 	fields = ['name']
+#   fields = ['name']
 
 class Literal(ast):
     fields = ['value']          
@@ -87,7 +87,7 @@ class VarDeclaration(ast):
     fields = ['name','typename','expr','length']          
   
 class TypeDeclaration(ast):
-	 fields = ['name', 'expr', 'typecompletion']   
+   fields = ['name', 'expr', 'typecompletion']   
 
 class Integertype(ast):
     fields = ['rangespec', 'expression']
