@@ -309,6 +309,7 @@ def p_decl_item_or_body(t):
 def p_decl_item(t):
   #rep_spec not implemented
   'decl_item : decl'
+  t[0] = t[1]
 
 def p_decl_item1(t):
   'decl_item : use_clause'
@@ -334,14 +335,28 @@ def p_decl(t):
           | subprog_decl
           | error SEMI_COLON
           '''
+  t[0] = t[1]
   pass
 
 #grammar for object decl
-def p_object_decl(t):
+def p_object_decl(t): #donedone
   'object_decl : def_id_s COLON object_qualifier_opt object_subtype_def init_opt SEMI_COLON'
+
 #pushing in symbol table
+  list1 = []
   if DEBUG :
-    print table_current.symbols.keys() 
+    print table_current.symbols.keys()
+  #to AST   
+  for i in t[1]:
+    if isinstance(t[4], Unconstrarray) or isinstance(t[4],Constrarray) :
+      list1.append([VariableDeclaration(i,Typename('array'),t[5],t[4],lineno=t.lineno(2))])
+    elif isinstance(t[4],tuple) :
+      list1.append([VariableDeclaration(i,t[4][0],t[5],t[4][1],lineno=t.lineno(2))])
+    else
+      list1.append([VariableDeclaration(i,t[4],t[5],None,lineno=t.lineno(2))])
+  p[0] = list1
+
+  #to insert in symbol table
   for i in t[1]:
     if i[1] not in table_current.symbols.keys():
         if DEBUG :
@@ -383,7 +398,7 @@ def p_def_id(t):
 
 def p_object_qualifier_opt(t):
   'object_qualifier_opt : '
-  t[0] = ""
+  t[0] = None
 
 def p_object_qualifier_opt1(t):
   ''' object_qualifier_opt : ALIASED
@@ -402,7 +417,7 @@ def p_object_subtype_def(t):
 
 def p_init_opt1(t):
   'init_opt : '
-  t[0] = ['NilExp', t.lexer.lineno]
+  t[0] = None
   pass
 
 def p_init_opt2(t):
@@ -413,11 +428,11 @@ def p_init_opt2(t):
 #grammar for number_decl
 def p_number_decl(t):
   'number_decl : def_id_s COLON CONSTANT ASSIGNMENT expression SEMI_COLON'
-  for i in t[1]:
-    if i not in table_current.symbols.keys():
-        table_current.symbols[i[1]] = ['NumTy', t.lexer.lineno, t[5]]
-    else:
-      print 'error : redeclaration of variable ' + i[1] + ' on line number ' + i[0]
+  # for i in t[1]:
+  #   if i not in table_current.symbols.keys():
+  #       table_current.symbols[i[1]] = ['NumTy', t.lexer.lineno, t[5]]
+  #   else:
+  #     print 'error : redeclaration of variable ' + i[1] + ' on line number ' + i[0]
 
   pass
 
@@ -476,19 +491,25 @@ def p_range_spec(t):
   'range_spec : range_constraint'
   pass
 
-def p_range_constraint(t):
+def p_range_constraint(t):  
   'range_constraint : RANGE range'
   t[0] = t[2]
   pass
 def p_range1(t):
   'range : simple_expression DOT_DOT simple_expression'
-  t[0] = ['OpExp', t.lexer.lineno, t[1], t[2], t[3]]
+  t[0]=Doubledotrange(t[1],t[3], lineno=t.lineno(2))
+
+#  t[0] = ['OpExp', t.lexer.lineno, t[1], t[2], t[3]]
 
 def p_range2(t):
-  '''range : name TICK RANGE
-           | name TICK RANGE BRA_OPEN expression BRA_CLOSE
-           '''
-  t[0] = t[1]
+  'range : name TICK RANGE'
+  t[0]=Nametick(LoadLocation(Location(t[1])),None,lineno=t.lineno(2))
+
+def p_range3(t):
+  'range : name TICK RANGE BRA_OPEN expression BRA_CLOSE'
+  t[0]=Nametick(LoadLocation(Location(t[1])),t[5],lineno=t.lineno(2))
+
+#  t[0] = t[1]
   pass
 
 def p_real_type(t):
@@ -507,7 +528,7 @@ def p_fixed_type(t):
                 '''
   pass
 
-def p_array_type(t):
+def p_array_type(t): #donedone
   '''array_type : unconstr_array_type
                 | constr_array_type
                 '''
@@ -516,31 +537,37 @@ def p_array_type(t):
 
 def p_unconstr_array_type(t):
   'unconstr_array_type : ARRAY BRA_OPEN index_s BRA_CLOSE OF component_subtype_def'
-  t[0] = ['UnconarraydefExp', t.lexer.lineno, t[3], t[6]]
+  t[0] = Unconstrarray(t[3],t[6][0],t[6][1][0], lineno=t.lineno(1))
+`
+#  t[0] = ['UnconarraydefExp', t.lexer.lineno, t[3], t[6]]
   pass
 
 def p_index_s(t):
   'index_s : index'
-  t[0] = ['ExpList', t.lexer.lineno, t[1], None]
+  t[0]=Indexs([t[1]], lineno=t.lineno(1))
+
+#  t[0] = ['ExpList', t.lexer.lineno, t[1], None]
   pass
 def p_index_s1(t):
   'index_s : index_s COMMA index'
-  t[0] = ['ExpList', t.lexer.lineno, t[3], t[1]]
+  t[0]=t[1]
+  t[0].append(t[3])
+#  t[0] = ['ExpList', t.lexer.lineno, t[3], t[1]]
   pass
 
 def p_index(t):
   'index : name RANGE BOX'
-  t[0] = t[1]
+  t[0] = LoadLocation(Location(t[1], lineno=t.lineno(2)), lineno=t.lineno(2))
   pass
 
 def p_component_subtype_def(t):
   'component_subtype_def : aliased_opt subtype_ind'
-  t[0] = t[2]
+  t[0] = (t[1],t[2])
   pass
 
 def p_aliased_opt(t):
   'aliased_opt : '
-  t[0] = ['NilExp', t.lexer.lineno]
+  t[0] = None
   pass
 
 def p_aliased_opt1(t):
@@ -549,9 +576,11 @@ def p_aliased_opt1(t):
   pass
 
 
-def p_constr_array_type(t):
+def p_constr_array_type(t):#done
   'constr_array_type : ARRAY iter_index_constraint OF component_subtype_def'
-  t[0] = ['ConarraydefExp', Nill(), t.lexer.lineno, t[2], t[4]]
+  t[0] = Constrarray(t[2],t[4][0],t[4][1][0], lineno=t.lineno(1))
+
+#  t[0] = ['ConarraydefExp', Nill(), t.lexer.lineno, t[2], t[4]]
 
   pass
 
@@ -562,56 +591,80 @@ def p_iter_index_constraint(t):
 
 def p_iter_discrete_range_s1(t):
   'iter_discrete_range_s : discrete_range'
-  t[0] = ['ExpList', t.lexer.lineno, t[1]]
+  if t[1][0] != None :
+    t[0] = [(Typename(t[1][0], lineno=t.lineno(1)),t[1][1])]
+  else :
+    t[0]=[t[1]]
+ # t[0] = ['ExpList', t.lexer.lineno, t[1]]
   pass
 def p_iter_discrete_range_s2(t):
   'iter_discrete_range_s : iter_discrete_range_s COMMA discrete_range'
-  t[0] = ['ExpList', t.lexer.lineno, t[3], t[1]]
+  t[0] = t[1]
+  if t[3][0] != None :
+      t[0].append((Typename(t[3][0], lineno=t.lineno(2)),p[3][1]))
+  else :
+      t[0].append(t[3])
+#  t[0] = ['ExpList', t.lexer.lineno, t[3], t[1]]
   pass
 
 def p_discrete_range(t):
-  '''discrete_range : name range_constr_opt
-                    | range
-                    '''
-  t[0] = t[1]
+  'discrete_range : name range_constr_opt'
+  t[0] = (t[1],t[2])
+
   pass
+def p_discrete_range1(t):
+  'discrete_range : range'
+  t[0] = (None,t[1])
+
 
 #grammar for subtype_decl
 def p_subtype_decl(t):
   'subtype_decl : SUBTYPE IDENTIFIER IS subtype_ind SEMI_COLON'
+  #checkThis
+  t[0] = [SubTypeDeclaration(t[2],t[4][0],None,t[4][1], lineno=t.lineno(3))]
 
   pass
-  t[0] = ['NameConstr', t.lexer.lineno, t[1], t[2]]
+#  t[0] = ['NameConstr', t.lexer.lineno, t[1], t[2]]
 
-def p_subtype_ind(t):
+def p_subtype_ind(t): #donedone
   'subtype_ind : name constraint'
   print "Not implemented constraint in declaration"
-  t[0] = ['NameConstr', t.lexer.lineno, t[1], t[2]]
+  if isinstance(t[1],tuple) :
+    t[0] = (Typename(t[1][0], lineno=t.lineno(1)), t[1][1],None)
+  else :
+    t[0] = (Typename(t[1], lineno = t.lineno(1)),None)
   pass
 
 def p_subtype_ind1(t):
   'subtype_ind : name'
-  t[0] = t[1]
+  if isinstance(t[1],tuple) :
+    t[0] = (Typename(t[1][0], lineno=t.lineno(1)), t[1][1],None)
+  else :
+    t[0]=(Typename(t[1], lineno=t.lineno(1)),t[2])
   pass
 
 def p_constraint(t):
   '''constraint : range_constraint
                 | decimal_digits_constraint
                 '''
-  t[0] = t[1]
+  t[0] = t[1] 
   pass
 
 def p_decimal_digits_constraint(t):
   'decimal_digits_constraint : DIGITS expression range_constr_opt'
-  t[0] = ['DecimalConstr', t.lexer.lineno, t[2], t[3]]
+  t[0] = t[2]
+  #t[0] = ['DecimalConstr', t.lexer.lineno, t[2], t[3]]
   pass
 
 def p_range_constr_opt(t):
   'range_constr_opt : '
-  t[0] = ['NilExp', t.lexer.lineno]
+  t[0] = None
+
+#  t[0] = ['NilExp', t.lexer.lineno]
   pass
 def p_range_constr_opt1(t):
   'range_constr_opt : range_constraint'
+#  t[0]=t[1]
   t[0] = t[1]
   pass
 
@@ -743,10 +796,11 @@ def p_attribute_id(t):
                   | DELTA
                   | ACCESS
                   '''
-
+  t[0] = t[1]
 #grammar for body
 def p_body(t):
   'body : subprog_body'
+  t[0] = t[1];
   pass
 
 def p_subprog_body(t):
@@ -782,6 +836,7 @@ def p_name(t):
 
 def p_attribute(t):
   'attribute : name TICK attribute_id'
+  t[0] = t[1]
   pass
 
 def p_name_opt(t):
@@ -797,20 +852,21 @@ def p_simple_name(t):
 def p_indexed_comp(t):
   'indexed_comp : name BRA_OPEN value_s BRA_CLOSE'
   #TODO add suitable type information here
-  t[0] = ['FuntionUse', Nill(), t.lexer.lineno, t[1],t[3]]
+  t[0] = (t[1],t[3])
+  #t[0] = ['FuntionUse', Nill(), t.lexer.lineno, t[1],t[3]]
   pass
 
 
-def p_selected_comp1(t):
+def p_selected_comp1(t):  
   '''selected_comp : name DOT simple_name
                   | name DOT used_char
                   | name DOT operator_symbol
                   '''
-  t[0] = ['OpExp', Nill() ,t.lexer.lineno, t[1],t[2],t[3]]
+#  t[0] = ['OpExp', Nill() ,t.lexer.lineno, t[1],t[2],t[3]]
 
 def p_selected_comp2(t):
   'selected_comp : name DOT ALL'
-  t[0] = ['OpExp', Nill(), t.lexer.lineno, t[1], t[2], ['StringExp', t.lexer.lineno, table_current, "ALL"]]
+#  t[0] = ['OpExp', Nill(), t.lexer.lineno, t[1], t[2], ['StringExp', t.lexer.lineno, table_current, "ALL"]]
   pass
 
 def p_used_char(t):
@@ -820,7 +876,8 @@ def p_used_char(t):
 
 def p_operator_symbol(t):
   'operator_symbol : STRING'
-  t[0] = ['StringExp', String(t[1]), t.lexer.lineno, table_current,t[1]]
+  t[0] = t[1]
+#  t[0] = ['StringExp', String(t[1]), t.lexer.lineno, table_current,t[1]]
   pass
 
 def p_compound_name1(t):
@@ -851,7 +908,7 @@ def p_value_s2(t):
   t[0] = t[1].append(t[3])
   pass
 
-def p_value(t):
+def p_value(t): #donedone
   '''value : expression
            | comp_assoc
            | discrete_with_range
@@ -860,7 +917,8 @@ def p_value(t):
 
 def p_value1(t):
   'value : error'
-  print 'error in lineno' + str(t.lexer.lineno)
+  t[0] = t[1]
+  #print 'error in lineno' + str(t.lexer.lineno)
 
 def p_comp_assoc(t):
   'comp_assoc : choice_s RIGHT_SHAFT expression'
@@ -881,10 +939,14 @@ def p_choice(t):
 
 def p_discrete_with_range1(t):
   'discrete_with_range : name range_constraint'
-  t[0] = t[1]
+  t[0] = (Typename(t[1], lineno=t.lineno(1)),t[2])
+
+#  t[0] = t[1]
 def p_discrete_with_range2(t):
   'discrete_with_range : range'
-  t[0] = t[1]
+  t[0] = (None,t[1]) 
+
+#  t[0] = t[1]
   pass
 
 
@@ -897,7 +959,7 @@ def p_discrete_with_range2(t):
 #   pass
 
 #grammar for expression
-def p_expression1(t):
+def p_expression1(t):#done
   'expression : relation'
   t[0] = t[1]
   pass
@@ -906,13 +968,15 @@ def p_expression2(t):
   '''expression : expression logical relation
                 | expression short_circuit relation
                 '''
-  if(t[1][1].name != "Boolean"):
-    print 'error on line number '+str(t.lexer.lineno)+': type should be boolean'
-  if(t[3][1].name != "Boolean"):
-    print 'error on line number '+str(t.lexer.lineno)+': type should be boolean'
-  t[0] = ['OpExp', t[1][1], t.lexer.lineno, t[1], t[2], t[3]]
+  t[0]=Relop(t[2],t[1],t[3], lineno=t.lineno(2))
 
-def p_relation1(t):
+  # if(t[1][1].name != "Boolean"):
+  #   print 'error on line number '+str(t.lexer.lineno)+': type should be boolean'
+  # if(t[3][1].name != "Boolean"):
+  #   print 'error on line number '+str(t.lexer.lineno)+': type should be boolean'
+  # t[0] = ['OpExp', t[1][1], t.lexer.lineno, t[1], t[2], t[3]]
+
+def p_relation1(t):#donedone 
   'relation : simple_expression'
   t[0] = t[1]
 
@@ -920,19 +984,25 @@ def p_relation2(t):
   '''realtion : simple_expression relational simple_expression
               | simple_expression membership range
               '''
-  if(t[1][1].name != t[3][1].name):
-    print 'type error on line number '+str(t.lexer.lineno)+': incompatible types'
-  t[0] = ['OpExp', Boolean(None), t.lexer.lineno, t[1], t[2], t[3]]
+  t[0] = Relop(t[2],t[1],t[3], lineno=t.lineno(2))
+
+  # if(t[1][1].name != t[3][1].name):
+  #   print 'type error on line number '+str(t.lexer.lineno)+': incompatible types'
+  # t[0] = ['OpExp', Boolean(None), t.lexer.lineno, t[1], t[2], t[3]]
 
 def p_relation3(t):
   'relation : simple_expression membership name'
   #TODO check name should be subtype and type checking
-  t[0] = ['OpExp', Boolean(None), t.lexer.lineno, t[1], t[2], t[3]]
+  t[0] = Relop(t[2],t[1],LoadLocation(Location(t[3], lineno=t.lineno(2)), lineno=t.lineno(2)), lineno=t.lineno(2))
+
+#  t[0] = ['OpExp', Boolean(None), t.lexer.lineno, t[1], t[2], t[3]]
 
 
-def p_simple_expression1(t):
+def p_simple_expression1(t): #donedonedone
   'simple_expression : unary term'
-  t[0] = ['UnaryOpExp', t[2][1], t.lexer.lineno, t[1], t[2]]
+  t[0] = Unaryop(t[1],t[2], lineno=t.lineno(2))
+
+  #t[0] = ['UnaryOpExp', t[2][1], t.lexer.lineno, t[1], t[2]]
   pass
 
 def p_simple_expression2(t):
@@ -942,21 +1012,23 @@ def p_simple_expression2(t):
 
 def p_simple_expression3(t):
   'simple_expression : simple_expression adding term'
-  if(t[1][1].name != t[3][1].name):
-    print "type error on line number "+str(t.lexer.lineno)+": incompatible types "+t[1][1].name+"and "+t[3][1].name
-  if(t[1][1].name != "Integer" or t[1][1].name != "Float"):
-    print "type error on line number "+str(t.lexer.lineno)+": type should be either Integer or Float"
-  if(t[3][1].name != "Integer" or t[3][1].name != "Float"):
-    print "type error on line number "+str(t.lexer.lineno)+": type should be either Integer or Float"
+  t[0] = Binop(t[2],t[1],t[3], lineno=t.lineno(2))
 
-  t[0] = ['OpExp', t[1][1], t.lexer.lineno, t[1], t[2], t[3]]
+  # if(t[1][1].name != t[3][1].name):
+  #   print "type error on line number "+str(t.lexer.lineno)+": incompatible types "+t[1][1].name+"and "+t[3][1].name
+  # if(t[1][1].name != "Integer" or t[1][1].name != "Float"):
+  #   print "type error on line number "+str(t.lexer.lineno)+": type should be either Integer or Float"
+  # if(t[3][1].name != "Integer" or t[3][1].name != "Float"):
+  #   print "type error on line number "+str(t.lexer.lineno)+": type should be either Integer or Float"
+
+  # t[0] = ['OpExp', t[1][1], t.lexer.lineno, t[1], t[2], t[3]]
   pass
 
 def p_unary(t):
   '''unary : ADD
            | SUB
            '''
-  t[0] = ['UnaryOp',t[1]]
+  t[0] = t[1]
   pass
 
 def p_adding(t):
@@ -964,24 +1036,26 @@ def p_adding(t):
             | SUB
             | AMPERSAND
             '''
-  t[0] = ['AddBinaryOp',t[1]]
+  t[0] = t[1]
   pass
 
-def p_term1(t):
-  'term : factor'
+def p_term1(t): #donedone
+  'term : factor' 
   t[0] = t[1]
   pass
 
 def p_term2(t):
   'term : term multiplying factor'
-  if(t[1][1].name != t[3][1].name):
-    print "type error on line number "+str(t.lexer.lineno)+": incompatible types "+t[1][1].name+"and "+t[3][1].name
-  if(t[1][1].name != "Integer" or t[1][1].name != "Float"):
-    print "type error on line number "+str(t.lexer.lineno)+": type should be either Integer or Float"
-  if(t[3][1].name != "Integer" or t[3][1].name != "Float"):
-    print "type error on line number "+str(t.lexer.lineno)+": type should be either Integer or Float"
+  t[0] = Binop(t[2],t[1],t[3], lineno=t.lineno(2))
+ 
+  # if(t[1][1].name != t[3][1].name):
+  #   print "type error on line number "+str(t.lexer.lineno)+": incompatible types "+t[1][1].name+"and "+t[3][1].name
+  # if(t[1][1].name != "Integer" or t[1][1].name != "Float"):
+  #   print "type error on line number "+str(t.lexer.lineno)+": type should be either Integer or Float"
+  # if(t[3][1].name != "Integer" or t[3][1].name != "Float"):
+  #   print "type error on line number "+str(t.lexer.lineno)+": type should be either Integer or Float"
 
-  t[0] = ['OpExp', t[1][1], t.lexer.lineno, t[1], t[2], t[3]]
+  # t[0] = ['OpExp', t[1][1], t.lexer.lineno, t[1], t[2], t[3]]
   pass
 
 def p_multiplying(t):
@@ -990,10 +1064,11 @@ def p_multiplying(t):
                  | MOD
                  | REM
                  '''
-  t[0] = ['MultBinaryOp', t[1]]
+  t[0] = t[1]
+#  t[0] = ['MultBinaryOp', t[1]]
   pass
 
-def p_factor1(t):
+def p_factor1(t): #donedone
   'factor : primary'
   t[0] = t[1]
   pass
@@ -1001,55 +1076,64 @@ def p_factor2(t):
   '''factor : NOT primary
             | ABS primary
             '''
-  if(t[2][1].name != "Boolean"):
-    print "type error on line number "+str(t.lexer.lineno)+": type should be Boolean"
-  t[0] = ['UnaryOpExp', t[2][1], t.lexer.lineno, t[1], t[2]]
+  t[0] = Unaryop(t[1],t[2], lineno=t.lineno(1))
+
+  # if(t[2][1].name != "Boolean"):
+  #   print "type error on line number "+str(t.lexer.lineno)+": type should be Boolean"
+  # t[0] = ['UnaryOpExp', t[2][1], t.lexer.lineno, t[1], t[2]]
 
 def p_factor3(t):
   'factor : primary EXPONENT primary'
-  if(t[1][1].name != t[3][1].name):
-    print "type error on line number "+str(t.lexer.lineno)+": incompatible types "+t[1][1].name+"and "+t[3][1].name
-  if(t[1][1].name != "Integer" or t[1][1].name != "Float"):
-    print "type error on line number "+str(t.lexer.lineno)+": type should be either Integer or Float"
-  if(t[3][1].name != "Integer" or t[3][1].name != "Float"):
-    print "type error on line number "+str(t.lexer.lineno)+": type should be either Integer or Float"
+  t[0] = Binop(t[2],t[1],t[3], lineno=t.lineno(2))
 
-  t[0] = ['OpExp', t[1][1], t.lexer.lineno, t[1], t[2], t[3]]
+  # if(t[1][1].name != t[3][1].name):
+  #   print "type error on line number "+str(t.lexer.lineno)+": incompatible types "+t[1][1].name+"and "+t[3][1].name
+  # if(t[1][1].name != "Integer" or t[1][1].name != "Float"):
+  #   print "type error on line number "+str(t.lexer.lineno)+": type should be either Integer or Float"
+  # if(t[3][1].name != "Integer" or t[3][1].name != "Float"):
+  #   print "type error on line number "+str(t.lexer.lineno)+": type should be either Integer or Float"
+
+  # t[0] = ['OpExp', t[1][1], t.lexer.lineno, t[1], t[2], t[3]]
   pass
 
-def p_primary1(t):
+def p_primary1(t): #hogyayahatak
   #Allocator not implemented
   '''primary : literal
             | parenthesized_primary
             '''
   t[0] = t[1]
 
-def p_primary2(t):
+def p_primary2(t): #flagflag
   #Allocator not implemented
   '''primary : name
              | allocator
              | qualified
              '''
-  if t[1][0] == 'StringExp':
-    identifier = table_current.lookup(t[1][4])
-    if(identifier == None):
-      print 'error on line number '+str(t.lexer.lineno)+': identifier '+t[1][4]+'used before declaration'
-  t[0] = t[1]
+  if isinstance(t[1],tuple):
+        t[0] = FuncCall(t[1][0],t[1][1], lineno=t.lineno(1))
+  else :
+        t[0] = LoadLocation(Location(t[1], lineno=t.lineno(1)), lineno=t.lineno(1))
+  # if t[1][0] == 'StringExp':
+  #   identifier = table_current.lookup(t[1][4])
+  #   if(identifier == None):
+  #     print 'error on line number '+str(t.lexer.lineno)+': identifier '+t[1][4]+'used before declaration'
+  # t[0] = t[1]
   pass
 
 def p_parenthesized_primary1(t):
   'parenthesized_primary : aggregate'
-  t[0] = ['NotImplemented', t.lexer.lineno, 'Aggregate not implemented']
+  t[0] = t[1]
+#  t[0] = ['NotImplemented', t.lexer.lineno, 'Aggregate not implemented']
   print 'Not Implemented aggregate in line no' + str(t.lexer.lineno)
 
 def p_parenthesized_primary2(t):
   'parenthesized_primary : BRA_OPEN expression BRA_CLOSE'
-  t[0] = t[1]
+  t[0] = t[2]
   pass
 
 def p_qualified (t):
   'qualified : name TICK parenthesized_primary'
-  t[0] = ['OpExp', t.lexer.lineno, t[1], t[2], t[3]]
+ # t[0] = ['OpExp', t.lexer.lineno, t[1], t[2], t[3]]
   pass
 
 def p_allocator (t):
@@ -1060,18 +1144,23 @@ def p_allocator (t):
 
 def p_literal1(t):
   'literal : NUMBER '
-  if(t[1].find('.') == -1):
-    t[0] = ['NumberExp', Integer(t[1]), t.lexer.lineno, t[1]]
-  else:
-    t[0] = ['NumberExp', Float(t[1]), t.lexer.lineno, t[1]]
+  t[0]=Literal(t[1], lineno=t.lineno(1))
+
+  # if(t[1].find('.') == -1):
+  #   t[0] = ['NumberExp', Integer(t[1]), t.lexer.lineno, t[1]]
+  # else:
+  #   t[0] = ['NumberExp', Float(t[1]), t.lexer.lineno, t[1]]
 
 def p_literal2(t):
   'literal : used_char'
-  t[0] = t[1]
+  t[0]=Literal(t[1], lineno=t.lineno(1))
+
 
 def p_literal3(t):
   'literal : NULL'
-  t[0] = ['NullExp', Null(), t.lexer.lineno, t[1]] 
+  t[0]=Literal(t[1], lineno=t.lineno(1))
+
+#  t[0] = ['NullExp', Null(), t.lexer.lineno, t[1]] 
   pass
 
 def p_aggregate(t):
@@ -1106,7 +1195,7 @@ def p_membership1(t):
 
 def p_membership2(t):
   'membership : NOT IN'
-  t[0] = t[1]+' '+t[2]
+  t[0] = t[1] + t[2]
 
 def p_logical(t):
   '''logical : AND
@@ -1119,7 +1208,7 @@ def p_short_circuit(t):
   '''short_circuit : AND THEN
                    | OR ELSE
                    '''
-  t[0] = t[1]
+  t[0] = t[1] + t[2]
   pass
 
 def p_error(t):

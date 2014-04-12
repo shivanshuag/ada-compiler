@@ -83,7 +83,7 @@ class Statements(ast):
 
 
 
-class VarDeclaration(ast):
+class VariableDeclaration(ast):
     fields = ['name','typename','expr','length']          
   
 class TypeDeclaration(ast):
@@ -197,6 +197,17 @@ class FuncParameterList(ast):
 
     def len(self):
         return len(self.parameters)
+
+#below three classes were added by mohit
+
+class FuncParameter(VarDeclaration):
+    pass
+
+class TypeDeclaration(VarDeclaration):
+    pass
+
+class SubTypeDeclaration(VarDeclaration):
+    pass
 
 class FuncCall(ast):
     fields = ['name','arguments']
