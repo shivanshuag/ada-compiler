@@ -16,6 +16,10 @@ bkaya hai line no 852 - t to p
 #donedone : array_type 
 
 #donedone	object_decl
+#donedone   type_decl
+#donedone subprog_decl
+#done param
+#done formal_part_opt
 
 {
  	Important : check the class subtypedeclaration 
@@ -26,4 +30,4 @@ bkaya hai line no 852 - t to p
 
 
 path: 
-decl_item -> type_decl (started)
+decl_item -> subprog_decl -> subprog_spec1    ->param_s -> param1 

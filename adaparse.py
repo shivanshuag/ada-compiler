@@ -440,55 +440,90 @@ def p_number_decl(t):
 def p_type_decl(t):
   #discrim_part not implemented
   'type_decl : TYPE IDENTIFIER type_completion SEMI_COLON'
+  t[0] = [TypeDeclaration(t[2], p[3][0],None, p[3][1], lineno=p.lineno(1))]
+
+  # '''type_decl : TYPE IDENTIFIER discrim_part_opt type_completion SEMICOLON'''
+  # t[0] = [TypeDeclaration(p[2], p[4][0],None, p[4][1], lineno=p.lineno(1))]
+
   pass
 
 def p_type_completion(t):
-  '''type_completion :
-                      | IS type_def
-                      '''
+  'type_completion : '
+  t[0] = None                    
+
   pass
+
+def p_type_completion1(t):
+  'type_completion : IS type_def'
+  t[0] = t[2]
 
 def p_type_def(t):
   # not implemented record_type, access_type, derived_type, private_type
-  '''type_def : enumeration_type 
-              | integer_type
-              | real_type
-              | array_type
-              '''
-  t[0] = t[1]
+  'type_def : enumeration_type'
+  t[0] = (Typename('enumeration'),t[1])
+  pass
+
+def p_type_def1(t):
+  'type_def : integer_type'
+  t[0] = (Typename('integer'),t[1])
+  pass
+
+def p_type_def2(t):
+  'type_def : real_type'
+  t[0] = (Typename('real'),t[1])
+  pass
+
+def p_type_def3(t):
+  'type_def : array_type'
+  t[0] = (Typename('array'),t[1])
   pass
 
 def p_enumeration_type(t):
   'enumeration_type : BRA_OPEN enum_id_s BRA_CLOSE'
-  t[0] = ['EnumExp', t[2]]
+  t[0] = t[2]
+  # t[0] = ['EnumExp', t[2]]
   pass
 
 def p_enum_id_s(t):
-  '''enum_id_s : enum_id
-              | enum_id_s COMMA enum_id
-              '''
-  pass
+  'enum_id_s : enum_id'
+  t[0] = Enum([t[1]], lineno=t.lineno(1))
 
+  pass
+def p_enum_id_s1(t):
+  'enum_id_s : enum_id_s COMMA enum_id'
+  t[0]=t[1]
+  t[0].append(t[3])
+
+  pass
 def p_enum_id(t):
   '''enum_id : IDENTIFIER
             | CHARACTER
             '''
+  t[0] = t[1]
   pass
 
 def p_integer_type(t):
-  '''integer_type : range_spec
-                  | MOD expression
-                  '''
+  'integer_type : range_spec'
+  t[0] = Integertype(t[1], None, lineno=t.lineno(1))
+
   pass
-  
+def p_integer_type1(t):
+  'integer_type : MOD expression'
+  t[0] = Integertype(None, t[2], lineno=t.lineno(1))
+  pass
+
 def p_range_spec_opt(t):
-  '''range_spec_opt :
-                    | range_spec
-                    '''
+  'range_spec_opt : '
+  t[0] = None
   pass
+
+def p_range_spec_opt1(t):
+  'range_spec_opt : range_spec'
+  t[0] = t[1]
 
 def p_range_spec(t):
   'range_spec : range_constraint'
+  t[0] = t[1]
   pass
 
 def p_range_constraint(t):  
@@ -516,16 +551,22 @@ def p_real_type(t):
   '''real_type : float_type
                 | fixed_type
                 '''
+  t[0] = t[1]
   pass
 
 def p_float_type(t):
   'float_type : DIGITS expression range_spec_opt'
+  t[0] = Floattype(t[2], t[3], lineno=t.lineno(1))
   pass
 
 def p_fixed_type(t):
-  '''fixed_type : DELTA expression range_spec
-                | DELTA expression DIGITS expression range_spec_opt
-                '''
+  'fixed_type : DELTA expression range_spec'
+  t[0] = Fixedtype(t[2], t[3], None, lineno=t.lineno(1))
+  pass
+
+def p_fixed_type1(t):
+  'fixed_type : DELTA expression DIGITS expression range_spec_opt'
+  t[0] = Fixedtype(t[2], t[5], t[4], lineno=t.lineno(1))
   pass
 
 def p_array_type(t): #donedone
@@ -675,34 +716,39 @@ def p_subprog_decl(t):
 
   '''subprog_decl : subprog_spec SEMI_COLON
                   '''
+  t[0] = t[1]
   pass
 
 def p_subprog_spec1(t):
   'subprog_spec : PROCEDURE compound_name formal_part_opt'
   if DEBUG : 
     print 'started procedure ' + t[2]
+  t[0] = (t[2],None,t[3])
   #create new symbol table for new scope
   global table_current
   table = symtable(table_current)
   table_current.symbols[t[2]] = table
   table_current = table
 
-  t[0] = (t[2],None,t[3])
+  
 
 def p_subprog_spec2(t):
   'subprog_spec : FUNCTION designator formal_part_opt RETURN name'
   if DEBUG : 
     print 'started function ' + t[2]
+  t[0] = (t[2],Typename(t[5], lineno=t.lexer.lineno),t[3])
+
   global table_current
   table = symtable(table_current)
   table_current.symbols[t[2]] = table
   table_current = table
-  t[0] = (t[2],Typename(t[5], lineno=t.lexer.lineno),t[3])
 
 def p_subprog_spec3(t):
   'subprog_spec : FUNCTION designator'
   if DEBUG : 
     print 'started function ' + t[2]
+  t[0] = (t[2],None,None)
+
   global table_current
   table = symtable(table_current)
   table_current.symbols[t[2]] = table
@@ -741,6 +787,10 @@ def p_param2(t):
   'param : error'
   pass
 
+
+def p_mode(t):
+  'mode : '
+  t[0] = None
 def p_mode(t):
   '''mode :
           | IN
@@ -748,7 +798,9 @@ def p_mode(t):
           | IN OUT
           | ACCESS
           '''
+  t[0] = t[1]
   pass
+
 
 # def p_discrim_part_opt(t):
 #   '''discrim_part_opt :
@@ -862,6 +914,7 @@ def p_selected_comp1(t):
                   | name DOT used_char
                   | name DOT operator_symbol
                   '''
+  pass
 #  t[0] = ['OpExp', Nill() ,t.lexer.lineno, t[1],t[2],t[3]]
 
 def p_selected_comp2(t):
@@ -887,7 +940,7 @@ def p_compound_name1(t):
 
 def p_compound_name2(t):
   'compound_name : compound_name DOT simple_name'
-  t[0]= t[1]+t[2]+t[3]
+  t[0]= str(t[1]+t[2]+t[3])
   pass
 
 #
@@ -1213,8 +1266,10 @@ def p_short_circuit(t):
 
 def p_error(t):
   '''error : '''
-  print 'error on'+str(t)
-
+  if t:
+    print 'Syntax error on'+str(t)
+  else :
+    print 'Syntax error on EOF'
 
 def make_parser():
   return yacc.yacc()
