@@ -1,0 +1,33 @@
+bkaya hai line no 852 - t to p
+#flagflag
+#hogyayahatak
+#donedone
+#donedone : term
+#donedonedone : simple expression
+			: name done
+            :  range done
+#donedone : relation
+		   : value
+#done : expression
+       : consraint
+#donedone : subtype_ind
+			unconstr_array_type 
+			iter_index_constraint
+#donedone : array_type 
+
+#donedone	object_decl
+#donedone   type_decl
+#donedone subprog_decl
+#done param
+#done formal_part_opt
+
+{
+ 	Important : check the class subtypedeclaration 
+ 	#checkThis
+
+ 	number_decl is "pass"
+}
+
+
+path: 
+decl_item -> subprog_decl -> subprog_spec1    ->param_s -> param1 
