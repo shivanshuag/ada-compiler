@@ -74,11 +74,15 @@ def p_unit(t):
   t[0] = t[1]
 
 
-
 def p_statement_s(t):
-  '''statement_s : statement
-                 | statement_s statement
-                 '''
+  'statement_s : statement'
+  t[0] = Statements([t[1]], lineno=t.lineno(1))
+
+
+def p_statement_s1(t):
+  'statement_s : statement_s statement'
+  t[0]=t[1]
+  t[0].append(t[2])
   pass
 
 def p_statement(t):
@@ -101,6 +105,8 @@ def p_unlabeled(t):
   '''unlabeled : simple_stmt
                | compound_stmt
                '''
+  t[0]=t[1]
+
   pass
 
 def p_simple_stmt(t):
@@ -118,6 +124,7 @@ def p_simple_stmt(t):
                  | code_stmt
                  | error SEMI_COLON
                  '''
+  t[0] = t[1]
   pass
 
 def p_compound_stmt(t):
@@ -134,10 +141,12 @@ def p_compound_stmt(t):
 #grammar for simple_stmts
 def p_null_stmt(t):
   'null_stmt : NULL SEMI_COLON'
+  t[0] = None
   pass
 
 def p_assign_stmt(t):
   'assign_stmt : name ASSIGNMENT expression SEMI_COLON'
+  
   pass
 
 def p_exit_stmt(t):
@@ -256,7 +265,7 @@ def p_basic_loop(t):
 
 def p_id_opt1(t):
   'id_opt :'
-  t[0] = ['NilExp', t.lexer.lineno]
+  t[0] = None
   pass
 
 def p_id_opt2(t):
@@ -281,6 +290,7 @@ def p_block(t):
 def p_block_body(t):
   #not implemented handled_statement_s
   'block_body : BEGIN statement_s'
+  t[0] = t[2]
   pass
 
 def p_block_decl(t):
@@ -290,8 +300,12 @@ def p_block_decl(t):
   pass
 
 def p_decl_part(t):
-  '''decl_part :
-               | decl_item_or_body_s1'''
+  'decl_part : '
+  p[0] = []
+  pass
+def p_decl_part1(t):
+  'decl_part : decl_item_or_body_s1'
+  p[0] = p[1]
   pass
 
 def p_decl_item_or_body_s1(t):
@@ -304,6 +318,7 @@ def p_decl_item_or_body(t):
   '''decl_item_or_body : body
                         | decl_item
                         '''
+  t[0] = t[1]                      
   pass
 
 def p_decl_item(t):
@@ -855,15 +870,21 @@ def p_body(t):
   t[0] = t[1];
   pass
 
-def p_subprog_body(t):
+def p_subprog_body(t): #chalu
   'subprog_body : subprog_spec IS decl_part block_body end_subprog'
+
   #table_current = symtable(NULL)
+  # t[0]=FuncStatement(t[1],p[2],p[1][2],p[2],p[3],p[5], lineno=p.lineno(4))
+  #     '''subprog_body : subprog_spec_is_push decl_part block_body END id_opt SEMICOLON'''
+  #   p[0]=FuncStatement(p[1][0],p[1][1],p[1][2],p[2],p[3],p[5], lineno=p.lineno(4))
   pass
 
 def p_end_subprog(t):
   'end_subprog : END id_opt SEMI_COLON'
   if DEBUG :
     print 'ended subprogram '+t[2][3]
+  t[0] = (t[1], t[2], t[3])
+
   global table_current
   table_current = table_current.parent
 
