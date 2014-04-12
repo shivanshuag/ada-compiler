@@ -7,71 +7,563 @@ import sys
 from ast import *
 from datatypes import *
 from symbol import *
-
 import adalex
 import adaparse
 
 class typecheck():
-	Int = Integer()
-	Float = Float()
-	Str = String()
-	Bool = Boolean()
-	table_first = symtable(None)
-	table_current = table_first
+  Int = Integer()
+  Float = Float()
+  Str = String()
+  Bool = Boolean()
+  Enum = Enumeration()
+  Char = Character()
+  Arr = Array()
+  types = {
+   "INTEGER": Int,
+   "Float": Float,
+   "CHARACTER": Char,
+   "BOOLEAN": Bool,
+   "STRING": Str,
+   "ARRAY": Arr,
+   "ENUMERATION": Enum
+  }
+  def check_goal_symbol(self,node):
+    self.check_compilation(node.compilation)
+    self.table_current = symtable(None, node)
 
-	def check_goal_symbol(self,node):
-		self.check_compilation(node.compilation)
+  def check_compilation(self, node):
+    for comp_unit in node.comp_unit
+      self.check_comp_unit(comp_unit)
 
-	def check_compilation(self, node):
-		for comp_unit in node.comp_unit
-			self.check_comp_unit(comp_unit)
-
-	def check_comp_unit(self,node):
-		node.table = symtable(self.table_current)
-		self.table_current = node.table
-		for statement in node.statements.statements
-			function_name = 'check_' + node.__class__.__name__
-      function = getattr(self, function_name)
-      function(statement)
+  def check_comp_unit(self,node):
+    node.table = symtable(self.table_current)
+    self.table_current = node.table
+    for statement in node.statements.statements
+      self.check(statement)
       #TODO add to symtable
 
   def check_AssignmentStatement(self,node):
     table_entry = self.table_current.lookup(node.location.name)
+    #check if variable is declared
     if not table_entry:
-      error(node.lineno, "name '{}' not defined".format(node.location.name))
+      self.error(node.lineno, "name"+node.location.name+" not defined")
       return
-    if table_entry.typename.check_type == EnumType :
+    #check if value belongs in range if type is enum
+    if table_entry.typename.check_type == Enum :
       if node.expr.location.name not in table_entry.length.enum_id :
-      error(node.lineno,"Not an enum values")
+      self.error(node.lineno,"Not an enum values")
       else :
-     	  if isinstance(node.expr,list):
-                for e in node.expr :
-                    self.visit(e)
-                if len(node.expr) != len((sym.length.record_def)[0].comp_decls) :
-                    error(node.lineno, "Length does not match")
-                else :
-                    for i in range(0,len(node.expr)):
-                        if ((sym.length.record_def)[0].comp_decls)[i].typename.check_type != (node.expr)[i].check_type :
-                            error(node.lineno, "Type doesn't match")
-            else :
-                self.visit(node.expr)
-        if isinstance(sym, VarDeclaration):
-            if hasattr(sym, "check_type") and hasattr(node.expr, "check_type"):
-                declared_type = sym.check_type
-                value_type = node.expr.check_type
-                if declared_type != value_type:
-                    error(node.lineno, "Cannot assign {} to {}".format(value_type.typename, declared_type.typename))
-                    return
+        #removed because records not implemented
+        # if isinstance(node.expr,list):
+        #         for e in node.expr :
+        #             self.visit(e)
+        #         if len(node.expr) != len((table_entry.length.record_def)[0].comp_decls) :
+        #             error(node.lineno, "Length does not match")
+        #         else :
+        #             for i in range(0,len(node.expr)):
+        #                 if ((table_entry.length.record_def)[0].comp_decls)[i].typename.check_type != (node.expr)[i].check_type :
+        #                     error(node.lineno, "Type doesn't match")
+        #     else :
+        self.check(node.expr)
+        #if assignment while declaration
+        if isinstance(table_entry, VariableDeclaration):
+          if hasattr(table_entry, "check_type") and hasattr(node.expr, "check_type"):
+            if table_entry.check_type != node.expr.check_type:
+              self.error(node.lineno, "Cannot assign"+value_type.typename+" to "+declared_type.typename)
+              return
+        #otherwise
         if hasattr(node.location, "check_type") and hasattr(node.expr, "check_type"):
-            declared_type = node.location.check_type
+          declared_type = node.location.check_type
+          value_type = node.expr.check_type
+          if declared_type != value_type:
+            self.error(node.lineno, "Cannot assign "+value_type.typename+" to "+declared_type.typename)
+
+  def check_ArrayAssignmentStatement(self,node):
+    # if not self.inside_function():
+    #   self.error(node.lineno, "Cannot assign variable outside function body")
+    # else:
+    table_entry = self.table_current.lookup(node.location.name)
+    if not table_entry:
+      self.error(node.lineno, "name "+node.location.name+" not defined")
+    else :
+      self.check(node.args)
+      self.check(node.expr)
+      if isinstance(table_entry, VariableDeclaration):
+        if hasattr(table_entry.length.subtype_ind, "check_type") and hasattr(node.expr, "check_type"):    
+          declared_type = table_entry.length.subtype_ind.check_type
+          value_type = node.expr.check_type
+          if declared_type != value_type:
+            self.error(node.lineno, "Cannot assign "+value_type+" to "+declared_type)
+        else:
+          if hasattr(table_entry.length.subtype_ind, "check_type") and hasattr(node.expr, "check_type"):
+            declared_type = table_entry.length.subtype_ind.check_type
             value_type = node.expr.check_type
             if declared_type != value_type:
-                error(node.lineno, "Cannot assign {} to {}".format(value_type.typename, declared_type.typename))
+              self.error(node.lineno, "Cannot assign "+value_type+" to "+declared_type)
+
+
+  def check_ExitStatement(self,node):
+    # if not self.inside_function():
+    #   self.error(node.lineno, "Cannot use exit statement outside function body")
+    #   return
+    self.check(node.name)
+    if node.expr != None :
+      self.check(node.expr)
+      if node.expr.check_type != Bool:
+        self.error(node.lineno, "Condition in a exit statement must be a boolean")
+  
+  def check_ReturnStatement(self, node):
+    self.visit(node.expr)
+      if self.table_current.return_type() != node.expr.check_type:
+        self.error(node.lineno, "Type of the return statement does not match the return type of the function")
+
+
+  def check_GotoStatement(self,node):
+    # if not self.inside_function():
+    #   error(node.lineno, "Cannot use goto statement outside function body")
+    #   return
+    self.check(node.name)
+  def check_ProcCall(self, node):
+    # if not self.inside_function():
+    #   error(node.lineno, "Cannot call function from outside function body; see main() for entry point")
+    #   return
+    self.visit(node.name)
+
+  def check_IfStatement(self,node):
+    # if not self.inside_function():
+    #   error(node.lineno, "Cannot use if statement outside function body")
+    # else:
+    self.check(node.expr)
+    if node.expr.check_type != Bool:
+      self.error(node.lineno, "Expression in if statement must evaluate to bool")
+    if node.truebranch is not None:
+      self.check(node.truebranch)
+    if node.falsebranch is not None:
+      self.check(node.falsebranch)
+    
+  def check_CaseStatement(self,node):
+    # if not self.inside_function():
+    #   error(node.lineno, "Cannot define an case outside function body")
+    #   return
+    self.visit(node.condition)
+    for alternative in node.alternatives.alternatives :
+      if alternative.choices.choices[0] != 'others':
+        self.check(alternative)
+        if hasattr(node.condition,'check_type') and hasattr(alternative,'check_type') :
+          if node.condition.check_type  != alternative.check_type :
+            self.error(node.lineno, "Type of condition and choice should match")
+          else :
+            self.error(node.lineno, "No type assigned to node")
+      else:
+          self.check(alternative.statements)
+
+
+  def  check_Alternative(self,node) :
+    self.check(node.choices.choices[0])
+    if hasattr(node.choices.choices[0],'check_type') :
+      temp=node.choices.choices[0].check_type
+    else :
+      self.error(node.lineno, "Type error") 
+    for ch in range(1,(len(node.choices.choices))) :
+      self.check(node.choices.choices[ch])
+      if hasattr(node.choices.choices[ch],'check_type')==False or node.choices.choices[ch].check_type!=temp :
+        error(node.lineno, "Type error")
+    if 'temp' in locals():
+      node.check_type = temp
+    self.check(node.statements)
+
+
+  def check_Forloop(self,node):
+    #node.scope_level = self.environment.scope_level()
+    #self.environment.push(node)
+    self.check(node.name)
+    self.table_current = symtable(self.table_current, node)
+    #self.environment.add_root(node.name.name, node.name)
+    self.checj(node.discrete_range)
+    if hasattr(node.name, "check_type") and hasattr(node.discrete_range, "check_type"):
+      if node.name.check_type == node.discrete_range.check_type :
+        node.check_type = Bool
+      else :
+        self.error(node.lineno, "Expression in for statement must evaluate to bool")
+    self.table_current = self.table_current.parent
+
+  def check_WhileStatement(self, node):
+    # global counter
+    # if not self.inside_function():
+    #     error(node.lineno, "Cannot define a while outside function body")
+    #     return
+    # if not self.inside_function():
+    #     error(node.lineno, "Cannot use while statement outside function body")
+    # 
+    # if node.label ==  None :
+    #     while self.environment.lookup(counter) is not None :
+    #         counter+=1
+    #     node.label = counter
+    #     counter+=1
+    #else:
+    flag = 1
+    if node.label !=  None :
+      if table_current.lookup(node.label) is not None:
+        self.error(node.lineno, "Redefining label "+node.label+" not allowed")
+        flag = 0
+      else:
+        if node.id!=None and node.label != node.id :
+          self.error(node.lineno, "Label "+node.label+" does not match")
+    if flag != 0 :
+      self.table_current.symbols[node.label] = node
+    self.table_current = symtable(self.table_current, node)
+    self.check(node.expr)
+    if node.expr != None :
+      if node.expr.check_type != Bool:
+        self.error(node.lineno, "Expression in while statement must evaluate to bool")
+    self.check(node.truebranch)
+    self.table_current = self.table_current.parent
+
+  def visit_Block(self,node):
+    # global counter
+    # if not self.inside_function():
+    #     error(node.lineno, "Cannot define a block outside function body")
+    #     return
+    # flag = 1
+    # if node.label ==  None :
+    #     while self.environment.lookup(counter) is not None :
+    #         counter+=1
+    #     node.label = counter
+    #     counter+=1
+    # else:
+    flag = 1
+    if node.label != None
+      if self.environment.lookup(node.label) is not None:
+        self.error(node.lineno, "Redefining label "+node.label+" not allowed")
+        flag = 0
+      else:
+        if node.id!=None and node.label != node.id :
+          self.error(node.lineno, "Label "+node.label+" does not match")
+    self.table_current = symtable(self.table_current, node)
+    if flag != 0 :
+       self.table_current.symbols[node.label] = node
+    for declarations in node.decl:
+      self.check(declarations)
+    self.check(node.block)
+    self.table_current = self.table_current.parent
+
+
+  def visit_VariableDeclaration(self,node):
+    # if not self.inside_function():
+    #   error(node.lineno, "Cannot do variable declaration outside function body")
+    #   return
+    if self.table_current.lookup(node.name) is not None:
+      self.error(node.lineno, "redefining variable "+node.name+" is not allowed")
+    else :
+      p=self.table_current.lookup(node.typename.name)
+      if isinstance(p,TypeDeclaration) :
+        node.expr = p.expr
+        node.length = p.length
+        node.typename = p.typename
+      else :
+        self.check(node.typename)
+        if node.length is not None :
+            self.check(node.length)
+        if node.expr is None:
+          default = node.typename.check_type.default
+          node.expr = Literal(default,lineno=node.lineno)
+          node.checkexpr.check_type = node.typename.check_type
+        self.visit(node.expr)
+        if node.typename.check_type != node.expr.check_type:
+          self.error(node.lineno, "Cannot assign "+node.typename.check_type+" to "+node.expr.check_type)
+      self.table_current.symbols[node.name] = node
+      if hasattr(node.typename, "check_type"):
+        node.check_type = node.typename.check_type
+    #node.scope_level = self.environment.scope_level()
+
+  def visit_TypeDeclaration(self,node):
+    # if not self.inside_function():
+    #   error(node.lineno, "Cannot do type declaration outside function body")
+    #   return
+    if self.table_current.lookup(node.name) is not None:
+      self.error(node.lineno, "redefining variable "+node.name+" is not allowed")
+    else :
+      self.check(node.typename)
+      if node.length is not None :
+        self.check(node.length)
+      if node.expr is not None :
+        self.check(node.expr)
+      if isinstance(node.length,Float_type) and hasattr(node.length,'check_type') and hasattr(node.typename,'check_type'):
+        if node.length.check_type != node.typename.check_type :
+          error(node.lineno,'Range has wrong type')
+      self.table_current.symbols[node.name] = node
+      if hasattr(node.typename, "check_type"):
+        node.check_type = node.typename.check_type
+    #node.scope_level = self.environment.scope_level()
+
+  def visit_SubTypeDeclaration(self,node):
+    # if not self.inside_function():
+    #     error(node.lineno, "Cannot do subtype declaration statement outside function body")
+    #     return
+    if self.table_current.lookup(node.name) is not None:
+      self.error(node.lineno, "redefining variable "+node.name+" is not allowed")
+    else :
+      p=self.environment.lookup(node.typename.name)
+      if isinstance(p,TypeDeclaration) :
+        node.expr = p.expr
+        node.typename = p.typename
+        self.check(node.typename)
+        if node.length is not None :
+          self.check(node.length)
+        if node.expr is not None :
+          self.check(node.expr)
+        self.table_current.symbols[node.name] = node
+        if hasattr(node.typename, "check_type"):
+          node.check_type = node.typename.check_type
+      else :
+        self.error(node.lineno, "Type is not valid")
+    #node.scope_level = self.environment.scope_level()
+
+
+  def check_Integertype(self, node):
+    # if not self.inside_function():
+    #   error(node.lineno, "Cannot define an integer outside function body")
+    # else:
+    if node.range_spec is not None:
+      self.check(node.range_spec)
+    else:
+      self.check(node.expression)
+
+  def visit_Floattype(self, node):
+    # if not self.inside_function():
+    #   error(node.lineno, "Cannot define an float outside function body")
+    # node.scope_level = self.environment.scope_level()
+    if node.range_spec_opt is not None:
+      self.check(node.range_spec_opt)
+      if hasattr(node.range_spec_opt,'check_type'):
+        node.check_type = node.range_spec_opt.check_type
+    self.check(node.expression)
+
+  def visit_Fixed_type(self, node):
+    #node.scope_level = self.environment.scope_level()
+    if node.range_spec_opt is not None:
+      self.check(node.range_spec_opt)
+    self.check(node.expression_1)
+    self.check(node.expression_2)
+
+  def visit_Unconstr_array(self,node):
+    # if not self.inside_function():
+    #   error(node.lineno, "Cannot define an array outside function body")
+    #   return
+    for index in node.index_s.index_s :
+      self.visit(index)
+    self.visit(node.subtype_ind)
+    node.check_type = node.subtype_ind.check_type
+
+  def visit_Constr_array(self,node):
+    # if not self.inside_function():
+    #   error(node.lineno, "Cannot define an array outside function body")
+    #   return
+    for drange in node.index_constraint :
+      if drange[0] is not None :
+        self.check(drange[0])
+      self.check(drange[1])
+      if drange[0]!=None :
+        if hasattr(drange[0],'check_type') and hasattr(drange[1],'check_type'):
+          if drange[0].check_type != drange[1].check_type :
+            error(node.lineno, "Type Mismatch "+node.location.name)
+    self.check(node.subtype_ind)
+    node.check_type = node.subtype_ind.check_type
+
+  def visit_Typename(self,node):
+    table_entry = self.table_current.lookup(node.name)
+    node.check_type = table_entry
+    if not isinstance(table_entry, Integer) and not isinstance(table_entry, Float) and not isinstance(table_entry, Boolean) and not isinstance(table_entry, Array) and not isinstance(table_entry, String) and not isinstance(table_entry, Enumeration) and not isinstance(table_entry, Character):
+      error(node.lineno, node.name+" is not a valid type")
+
+  def check_Location(self,node):
+      table_entry = self.table_current.lookup(node.name)
+      if not table_entry:
+        self.error(node.lineno, "name "+node.name+" not found")
+      node.check_type = table_entry.check_type
+
+  def check_LoadLocation(self, node):
+    if node.location.name == 'newline':
+      return
+    table_entry = self.table_current.lookup(node.location.name)
+    if not table_entry:
+      self.error(node.lineno, "name "+node.location.name+" not found")
+    else:
+      if not isinstance(table_entry, Integer) and not isinstance(table_entry, Float) and not isinstance(table_entry, Boolean) and not isinstance(table_entry, Array) and not isinstance(table_entry, String) and not isinstance(table_entry, Enumeration) and not isinstance(table_entry, Character):
+        self.error(node.lineno, "cannot use "+table_entry.typename+" outside of variable declarations")
+        return
+      if isinstance(table_entry,FuncStatement):
+        node.check_type = None
+        pass
+      else:
+        check_type = table_entry.check_type
+        if check_type is None:
+          self.error(node.lineno, "Using unrecognized type "+valtype)
+        node.check_type = check_type
+
+  def check_Literal(self,node):
+    valtype = type(node.value)
+    check_type = self.types.get(valtype, None)
+    if check_type is None:
+      self.error(node.lineno, "Using unrecognized type "+valtype)
+    if check_type==String and len(node.value)==1 :
+      check_type = Char
+    node.check_type = check_type
+
+  def visit_Value_s(self, node):
+    for argument in node.arguments:
+      if isinstance(argument,tuple):
+        if argument[0] is not None :
+          self.check(argument[0])
+        if argument[1] is not None :
+          self.check(argument[1])
+        if hasattr(argument[0],'check_type') :
+          node.check_type = argument[0].check_type
+        elif hasattr(argument[1],'check_type') :
+          node.check_type = argument[1].check_type
+      else :
+        self.visit(argument)
+        if hasattr(node,'check_type') :
+          node.check_type = argument.check_type
+
+''' TODO
+    def visit_Doubledot_range(self,node):
+        node.scope_level = self.environment.scope_level()
+        self.visit(node.left)
+        self.visit(node.right)
+        if hasattr(node.left, "check_type") and hasattr(node.right, "check_type"):
+            if node.left.check_type == node.right.check_type :
+                node.check_type = node.left.check_type
+            else :
+                error(node.lineno,"Type does not match")
+
+    def visit_Name_tick(self,node):
+        self.visit(node.name)
+        if node.expression != None :
+            self.visit(node.expression)
+        if hasattr(node.name,'check_type'):
+            node.check_type = node.name.check_type
+
+    def visit_Block(self,node):
+        global counter
+        if not self.inside_function():
+            error(node.lineno, "Cannot define a block outside function body")
+            return
+        flag = 1
+        if node.label ==  None :
+            while self.environment.lookup(counter) is not None :
+                counter+=1
+            node.label = counter
+            counter+=1
+        else:
+            if self.environment.lookup(node.label) is not None:
+                error(node.lineno, "Attempted to redefine label, not allowed".format(node.label))
+                flag = 0
+            else:
+                if node.id!=None and node.label != node.id :
+                    error(node.lineno, "Label does not match".format(node.label))
+        self.environment.push(node)
+        if flag != 0 :
+            self.environment.add_local(node.label, node)
+        for declarations in node.decl:
+            self.visit(declarations)
+        self.visit(node.block)
+        self.environment.pop()
+
+    def visit_FuncStatement(self, node):
+        global hasDriverFunction
+        filepath = sys.argv[1]
+        fs, ld = filepath.rfind('/'), filepath.rfind('.')
+        name = filepath[fs+1:ld]
+        if node.name == name:
+            hasDriverFunction = True
+        node.scope_level = self.environment.scope_level()
+        if node.scope_level > 1:
+            error(node.lineno, "Nested functions not implemented")
+        self.environment.push(node)
+        if self.environment.lookup(node.name) is not None:
+            error(node.lineno, "Attempted to redefine func '{}', not allowed".format(node.name))
+        else :
+            if node.id!=None and node.name != node.id :
+                error(node.lineno, "Label does not match".format(node.name))
+            self.environment.add_root(node.name, node)
+        if node.returntype is not None :
+            self.visit(node.returntype)
+            if hasattr(node.returntype, "check_type"):
+                 node.check_type = node.returntype.check_type
+        self.visit(node.parameters)
+        for declarations in node.decl_part:
+            self.visit(declarations)
+        self.visit(node.statements)
+        self.environment.pop()
+
+    def visit_FuncParameterList(self, node):
+        for parameter in node.parameters:
+            self.visit(parameter)
+
+    def visit_FuncParameter(self, node):
+        self.environment.add_local(node.name, node)
+        node.scope_level = self.environment.scope_level()
+        self.visit(node.typename)
+        node.check_type = node.typename.check_type 
+
+    def visit_ProcCall(self, node):
+        if not self.inside_function():
+            error(node.lineno, "Cannot call function from outside function body; see main() for entry point")
+            return
+        self.visit(node.name)
+
+    def visit_FuncCall(self, node):
+        if not self.inside_function():
+            error(node.lineno, "Cannot call function from outside function body; see main() for entry point")
+            return
+        sym = self.environment.lookup(node.name)
+        if not sym:
+            if node.name == 'put':
+                if node.arguments is not None:
+                    if len(node.arguments.arguments) > 1:
+                        error(node.lineno, "Put accepts only one argument")
+                    else:
+#                        if hasattr(node.arguments.arguments[0],'location') and node.arguments.arguments[0].location.name != 'newline':
+                         self.visit(node.arguments)
+            else:
+                error(node.lineno, "Function name '{}' not found".format(node.name))
+        else :
+            if hasattr(sym,'check_type'):
+                node.check_type = sym.check_type
+                if node.check_type==ArrayType: 
+                    node.check_type=IntType
+                    node.isArray = True
+                elif not isinstance(sym, FuncStatement):
+                    error(node.lineno, "Tried to call non-function '{}'".format(node.name))
+                else:
+                    if node.arguments is not None:
+                        if len(sym.parameters.parameters) != len(node.arguments.arguments):
+                            error(node.lineno, "Number of arguments for call to function '{}' do not match function parameter declaration on line {}".format(node.name, sym.lineno))
+#changed
+                        self.visit(node.arguments)
+                        argerrors = False
+                        for arg, parm in zip(node.arguments.arguments, sym.parameters.parameters):
+                            if arg.check_type != parm.typename.check_type:
+                                error(node.lineno, "Argument type '{}' does not match parameter type '{}' in function call to '{}'".format(arg.check_type.typename, parm.check_type.typename, node.name))
+                                argerrors = True
+                            if argerrors:
+                                return
+                            arg.parm = parm
+'''
+
+  def error(msg, lineno):
+    print "type error on line number "+str(lineno)+": "+msg
+
+  def check(self, node):
+    function_name = 'check_' + node.__class__.__name__
+    function = getattr(self, function_name)
+    function(node)
 
 
 
 def main():
-	global DEBUG
+  global DEBUG
   if(len(sys.argv) > 2):
     DEBUG = 1
   fileName = sys.argv[1]
@@ -79,10 +571,10 @@ def main():
   parser = make_parser()
   tree = parser.parse(f.read())
   typechecker = new typecheck()
-  typechecker.check(tree)
+  typechecker.check_goal_symbol(tree)
 
 DEBUG = 0
 lexer = adalex.make_lexer()
 tokens = adalex.tokens
 if __name__ == '__main__':
-	main()
+  main()

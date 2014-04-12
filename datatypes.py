@@ -35,6 +35,9 @@ class String():
   binary_opcodes={"&":"ampersand"}
   #binary_folds={"&": operator.add}
 
+
+class Character():
+	name="Character"
 class Boolean():
   name = "Boolean"
   unary={"!"},
@@ -46,3 +49,6 @@ class Boolean():
 
 class Array():
  name = "Array"
+
+class Enumeration():
+	name = "Enum"

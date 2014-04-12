@@ -171,9 +171,6 @@ class Choices(ast):
 class WhileStatement(ast):
     fields = ['label','expr', 'truebranch','id']
 
-class LoopStatement(ast):
-    fields = ['condition','truebranch']
-
 class Forloop(ast):
     fields = ['name','reverse','discreterange']
 
