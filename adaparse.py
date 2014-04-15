@@ -8,13 +8,6 @@ import sys
 import adalex
 import ply.yacc as yacc
 
-from symbol import symtable
-
-table_current = symtable(None)
-
-types_declared = []
-subtypes_declared = []
-
 def p_goal_symmbol(t):
   'goal_symbol : compilation'
   t[0] = goal_symbol(t[1], lineno=t.lexer.lineno)
@@ -352,7 +345,7 @@ def p_object_decl(t): #donedone
       list1.append([VariableDeclaration(i,Typename('array'),t[5],t[4],lineno=t.lineno(2))])
     elif isinstance(t[4],tuple) :
       list1.append([VariableDeclaration(i,t[4][0],t[5],t[4][1],lineno=t.lineno(2))])
-    else
+    else:
       list1.append([VariableDeclaration(i,t[4],t[5],None,lineno=t.lineno(2))])
   p[0] = list1
 
@@ -579,7 +572,6 @@ def p_array_type(t): #donedone
 def p_unconstr_array_type(t):
   'unconstr_array_type : ARRAY BRA_OPEN index_s BRA_CLOSE OF component_subtype_def'
   t[0] = Unconstrarray(t[3],t[6][0],t[6][1][0], lineno=t.lineno(1))
-`
 #  t[0] = ['UnconarraydefExp', t.lexer.lineno, t[3], t[6]]
   pass
 
@@ -749,11 +741,11 @@ def p_subprog_spec3(t):
     print 'started function ' + t[2]
   t[0] = (t[2],None,None)
 
-  global table_current
-  table = symtable(table_current)
-  table_current.symbols[t[2]] = table
-  table_current = table
-  t[0] = (t[2],None,None)
+  # global table_current
+  # table = symtable(table_current)
+  # table_current.symbols[t[2]] = table
+  # table_current = table
+  # t[0] = (t[2],None,None)
 
 
 def p_formal_part_opt1(t):
@@ -864,8 +856,8 @@ def p_end_subprog(t):
   'end_subprog : END id_opt SEMI_COLON'
   if DEBUG :
     print 'ended subprogram '+t[2][3]
-  global table_current
-  table_current = table_current.parent
+  # global table_current
+  # table_current = table_current.parent
 
   pass
 #grammar for name

@@ -197,13 +197,13 @@ class FuncParameterList(ast):
 
 #below three classes were added by mohit
 
-class FuncParameter(VarDeclaration):
+class FuncParameter(VariableDeclaration):
     pass
 
-class TypeDeclaration(VarDeclaration):
+class TypeDeclaration(VariableDeclaration):
     pass
 
-class SubTypeDeclaration(VarDeclaration):
+class SubTypeDeclaration(VariableDeclaration):
     pass
 
 class FuncCall(ast):

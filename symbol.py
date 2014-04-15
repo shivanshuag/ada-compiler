@@ -18,7 +18,7 @@ class symtable():
 			table = table.parent
 		return None	
 	def return_type():
-    	if self.astnode:
-      		if self.astnode.returntype != None:
-        		return self.astnode.returntype.check_type
-    	return None
+		if self.astnode:
+			if self.astnode.returntype != None:
+				return self.astnode.returntype.check_type
+		return None
