@@ -12,20 +12,28 @@ class ast():
       setattr(self, field, value)
     for name,value in kwargs.items():
       setattr(self,name,value)
+    self.depth = 1
+  def __repr__(self):
+    excluded = {"lineno", "depth"}
+    dt = '\t'*self.depth
+    return "{}[\n{}{}\n]".format(self.__class__.__name__, dt,
+      {key: value 
+       for key, value in vars(self).items() 
+        if not key.startswith("_") and not key in excluded and value is not None})
 
 
 #All the classes below inherit the ast class. Each class defines a list of fields for the ast node.
 #ast class creates the properties for those fields in the object of the class
 class goal_symbol(ast):
-    fields = ['compilation']          
+  fields = ['compilation']          
 
 class compilation(ast):
-    fields = ['comp_unit']
-    def new_comp_unit(self,unit):
-      self.comp_unit.append(unit)
+  fields = ['comp_unit']
+  def new_comp_unit(self,unit):
+    self.comp_unit.append(unit)
 
-    # def len(self):
-    #     return len(self.program)
+  # def len(self):
+  #     return len(self.program)
 
 # class comp_unit(ast):
 #   fields = ['context_spec', 'unit']
@@ -43,191 +51,225 @@ class compilation(ast):
 #   fields = ['name']
 
 class Literal(ast):
-    fields = ['value']          
+  fields = ['value']          
 
 class Typename(ast):
-    fields = ['name']          
+  fields = ['name']          
 
 class Location(ast):
-    fields = ['name']          
+  fields = ['name']          
 
 class LoadLocation(ast):
-    fields = ['location']          
+  fields = ['location']          
 
 class Unaryop(ast):
-    fields = ['op','expr']           
+  fields = ['op','expr']           
 
 class Binop(ast):
-    fields = ['op','left','right']          
-    
+  fields = ['op','left','right']          
+  
 class Relop(ast):
-    fields = ['op','left','right']          
-    
+  fields = ['op','left','right']          
+  
 class AssignmentStatement(ast):
-    fields = ['location','expr']          
+  fields = ['location','expr']          
 
 class ArrayAssignmentStatement(ast):
-    fields = ['location','args','expr']          
+  fields = ['location','args','expr']          
 
 class PrintStatement(ast):
-    fields = ['expr']          
-    
+  fields = ['expr']          
+  
 class Statements(ast):
-    fields = ['statements']          
+  fields = ['statements']          
 
-    def append(self,stmt):
-        self.statements.append(stmt)
+  def append(self,stmt):
+    self.statements.append(stmt)
 
-    def len(self):
-        return len(self.statements)
+  def len(self):
+    return len(self.statements)
 
 
 
 class VariableDeclaration(ast):
-    fields = ['name','typename','expr','length']          
+  fields = ['name','typename','expr','length']          
   
 class TypeDeclaration(ast):
    fields = ['name', 'expr', 'typecompletion']   
 
 class Integertype(ast):
-    fields = ['rangespec', 'expression']
+  fields = ['rangespec', 'expression']
 
 class Floattype(ast):
-    fields = ['expression', 'rangespecopt']
+  fields = ['expression', 'rangespecopt']
 
 class Fixedtype(ast):
-    fields = ['expression1', 'rangespecopt', 'expression2']
+  fields = ['expression1', 'rangespecopt', 'expression2']
 
 class Accesstypesubtype(ast):
-    fields = ['modifier', 'subtypeind']
+  fields = ['modifier', 'subtypeind']
 
 class Accesstypesubprog(ast):
-    fields = ['protopt', 'formalpartopt', 'mark']
-     
+  fields = ['protopt', 'formalpartopt', 'mark']
+   
 class Unconstrarray(ast):
-    fields = ['indexs','aliased','subtypeind']
-    
+  fields = ['indexs','aliased','subtypeind']
+  
 class Constrarray(ast):
-    fields = ['indexconstraint','aliased','subtypeind']
+  fields = ['indexconstraint','aliased','subtypeind']
 
 class Record(ast):
-    fields = ['tagged',' limited','recorddef']
+  fields = ['tagged',' limited','recorddef']
 
 class Enum(ast):
-    fields = ['enumid']
-    
-    def append(self,stmt):
-        self.enumid.append(stmt)
+  fields = ['enumid']
+  
+  def append(self,stmt):
+    self.enumid.append(stmt)
 
-    def len(self):
-        return len(self.enumid) 
+  def len(self):
+    return len(self.enumid) 
 
 class ComponentDeclaration(ast):
-    fields = ['compdecls']
+  fields = ['compdecls']
 
-    def append(self,compdecl):
-        self.compdecls = self.compdecls + compdecl
+  def append(self,compdecl):
+    self.compdecls = self.compdecls + compdecl
 
-    def len(self):
-        return len(self.compdecls)
+  def len(self):
+    return len(self.compdecls)
 
  
 class Indexs(ast):
-    fields = ['indexs']
-    
-    def append(self,stmt):
-        self.indexs.append(stmt)
+  fields = ['indexs']
+  
+  def append(self,stmt):
+    self.indexs.append(stmt)
 
-    def len(self):
-        return len(self.indexs)
+  def len(self):
+    return len(self.indexs)
 
 class IfStatement(ast):
-    fields = ['expr', 'truebranch', 'falsebranch']
+  fields = ['expr', 'truebranch', 'falsebranch']
 
 class CaseStatement(ast):
-    fields = ['condition','alternatives']
+  fields = ['condition','alternatives']
 
 class Alternatives(ast):
-    fields = ['alternatives']
+  fields = ['alternatives']
 
-    def append(self,alternate):
-        self.alternatives.append(alternate)
+  def append(self,alternate):
+    self.alternatives.append(alternate)
 
-    def len(self):
-        return len(self.alternatives)
+  def len(self):
+    return len(self.alternatives)
 
 class Alternative(ast):
-    fields = ['choices','statements']
+  fields = ['choices','statements']
 
 class Choices(ast):
-    fields = ['choices']
+  fields = ['choices']
 
-    def append(self,choice):
-        self.choices.append(choice)
-    
-    def len(self):
-        return len(self.choices)
+  def append(self,choice):
+    self.choices.append(choice)
+  
+  def len(self):
+    return len(self.choices)
 
 class WhileStatement(ast):
-    fields = ['label','expr', 'truebranch','id']
+  fields = ['label','expr', 'truebranch','id']
 
 class Forloop(ast):
-    fields = ['name','reverse','discreterange']
+  fields = ['name','reverse','discreterange']
 
 class Doubledotrange(ast):
-    fields = ['left','right']
+  fields = ['left','right']
 
 class Nametick(ast):
-    fields = ['name','expression']
+  fields = ['name','expression']
 
 class Block(ast):
-    fields = ['label','decl','block','id']
+  fields = ['label','decl','block','id']
 
 class FuncStatement(ast):
-    fields = ['name', 'returntype', 'parameters','declpart','statements','id']
+  fields = ['name', 'returntype', 'parameters','declpart','statements','id']
 
 class FuncParameterList(ast):
-    fields = ['parameters']
+  fields = ['parameters']
 
-    def new_parameter(self,stmt):
-        self.parameters = self.parameters + stmt
+  def new_parameter(self,stmt):
+    self.parameters = self.parameters + stmt
 
-    def len(self):
-        return len(self.parameters)
+  def len(self):
+    return len(self.parameters)
 
 #below three classes were added by mohit
 
 class FuncParameter(VariableDeclaration):
-    pass
+  pass
 
 class TypeDeclaration(VariableDeclaration):
-    pass
+  pass
 
 class SubTypeDeclaration(VariableDeclaration):
-    pass
+  pass
 
 class FuncCall(ast):
-    fields = ['name','arguments']
+  fields = ['name','arguments']
 
 class ProcCall(ast):
-    fields = ['name']
+  fields = ['name']
 
 class Values(ast):
-    fields = ['arguments']
+  fields = ['arguments']
 
-    def append(self,stmt):
-        self.arguments.append(stmt)
+  def append(self,stmt):
+    self.arguments.append(stmt)
 
-    def len(self):
-        return len(self.arguments)
+  def len(self):
+    return len(self.arguments)
 
 class ReturnStatement(ast):
-    fields = ['expr']
+  fields = ['expr']
 
 class ExitStatement(ast):
-    fields = ['name','expr']
+  fields = ['name','expr']
 
 class GotoStatement(ast):
-    fields = ['name']
+  fields = ['name']
+
+class NodeVisitor(object):
+  def visit(self,node):
+    if node:
+      method = 'visit_' + node.__class__.__name__
+      visitor = getattr(self, method, self.generic_visit)
+      return visitor(node)
+    else:
+      return None
+    
+  def generic_visit(self,node):
+    for field in getattr(node,"fields"):
+      value = getattr(node,field,None)
+      if isinstance(value, list):
+        for item in value:
+          if isinstance(item,ast):
+            self.visit(item)
+      elif isinstance(value, ast):
+        self.visit(value)
 
 
+
+def flatten(top):
+    class Flattener(NodeVisitor):
+        def __init__(self):
+            self.depth = 0
+            self.nodes = []
+        def generic_visit(self,node):
+            self.nodes.append((self.depth,node))
+            self.depth += 1
+            NodeVisitor.generic_visit(self,node)
+            self.depth -= 1
+
+    d = Flattener()
+    d.visit(top)
+    return d.nodes

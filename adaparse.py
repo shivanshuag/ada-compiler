@@ -7,6 +7,7 @@
 import sys
 import adalex
 import ply.yacc as yacc
+from ast import *
 
 def p_goal_symmbol(t):
   'goal_symbol : compilation'
@@ -70,7 +71,7 @@ def p_unit(t):
 
 def p_statement_s(t):
   'statement_s : statement'
-  t[0] = Statements([t[1]], lineno=t.lexer.lineno(1))
+  t[0] = Statements([t[1]], lineno=t.lexer.lineno)
 
 
 def p_statement_s1(t):
@@ -150,42 +151,42 @@ def p_null_stmt(t):
 def p_assign_stmt(t):
   'assign_stmt : name ASSIGNMENT expression SEMI_COLON'
   if isinstance(t[1],tuple) :
-    t[0] = ArrayAssignmentStatement(Location(t[1][0], lineno=t.lexer.lineno(2)),t[1][1],t[3], lineno=t.lexer.lineno(2))
+    t[0] = ArrayAssignmentStatement(Location(t[1][0], lineno=t.lexer.lineno),t[1][1],t[3], lineno=t.lexer.lineno)
   else :
-    t[0] = AssignmentStatement(Location(t[1], lineno=t.lexer.lineno(2)),t[3], lineno=t.lexer.lineno(2)) 
+    t[0] = AssignmentStatement(Location(t[1], lineno=t.lexer.lineno),t[3], lineno=t.lexer.lineno) 
   pass
 
 def p_exit_stmt(t):
   'exit_stmt : EXIT name_opt when_opt SEMI_COLON'
   if t[2] is not None:
-    t[0] = ExitStatement(LoadLocation(Location(t[2], lineno=t.lexer.lineno(1)), lineno=t.lexer.lineno(1)),t[3], lineno=t.lexer.lineno(1))
+    t[0] = ExitStatement(LoadLocation(Location(t[2], lineno=t.lexer.lineno), lineno=t.lexer.lineno),t[3], lineno=t.lexer.lineno)
   else:
-    t[0] = ExitStatement(None,t[3], lineno=t.lexer.lineno(1))
+    t[0] = ExitStatement(None,t[3], lineno=t.lexer.lineno)
   pass
 
 def p_return_stmt(t):
   'return_stmt : RETURN SEMI_COLON'
   t[0] = ReturnStatement(None)
 
-def p_return_stmt1(t):  
+def p_return_stmt1(t):
   'return_stmt : RETURN expression SEMI_COLON'
-  t[0]= ReturnStatement(t[2], lineno=t.lexer.lineno(1))
+  t[0]= ReturnStatement(t[2], lineno=t.lexer.lineno)
   pass
 
   pass
 
 def p_goto_stmt(t):
   'goto_stmt : GOTO name SEMI_COLON'
-  t[0] = GotoStatement(LoadLocation(Location(t[2], lineno=t.lexer.lineno(1))),lineno=t.lexer.lineno(1))
+  t[0] = GotoStatement(LoadLocation(Location(t[2], lineno=t.lexer.lineno)),lineno=t.lexer.lineno)
 
   pass
 
 def p_procedure_call(t):
   'procedure_call : name SEMI_COLON'
   if (isinstance(t[1],tuple)):
-        t[0] = FuncCall(t[1][0],t[1][1], lineno=t.lexer.lineno(2))
-    else:
-        t[0] = ProcCall(LoadLocation(Location(t[1], lineno=t.lexer.lineno(2)), lineno=t.lexer.lineno(2)), lineno=t.lexer.lineno(2))
+        t[0] = FuncCall(t[1][0],t[1][1], lineno=t.lexer.lineno)
+  else:
+      t[0] = ProcCall(LoadLocation(Location(t[1], lineno=t.lexer.lineno), lineno=t.lexer.lineno), lineno=t.lexer.lineno)
   pass
 
 def p_delay_stmt(t):
@@ -216,7 +217,7 @@ def p_code_stmt(t):
 #grammar for if statements
 def p_if_stmt(t):
   'if_stmt : IF cond_clause else_opt END IF SEMI_COLON'
-  t[0] = IfStatement(t[2][0],t[2][1],t[3], lineno=t.lexer.lineno(1))
+  t[0] = IfStatement(t[2][0],t[2][1],t[3], lineno=t.lexer.lineno)
 
   pass
 #changed by mohit
@@ -253,7 +254,7 @@ def p_else_opt1(t):
 
 def p_else_opt2(t):
   'else_opt : ELSIF cond_clause else_opt'
-  t[0] = IfStatement(t[2][0],t[2][1],t[3], lineno=t.lexer.lineno(1))
+  t[0] = IfStatement(t[2][0],t[2][1],t[3], lineno=t.lexer.lineno)
   pass
 
 
@@ -261,7 +262,7 @@ def p_else_opt2(t):
 #grammar for case_stmt
 def p_case_stmt(t):
   'case_stmt : case_hdr alternative_s END CASE SEMI_COLON'
-  t[0] = CaseStatement(t[1],t[2], lineno=t.lexer.lineno(3))
+  t[0] = CaseStatement(t[1],t[2], lineno=t.lexer.lineno)
 
   pass
 
@@ -282,7 +283,7 @@ def p_alternative_s1(t):
 
 def p_alternative(t):
   'alternative : WHEN choice_s RIGHT_SHAFT statement_s'
-  t[0]=Alternative(t[2],t[4],lineno=t.lexer.lineno(1))
+  t[0]=Alternative(t[2],t[4],lineno=t.lexer.lineno)
 
   pass
 
@@ -291,7 +292,7 @@ def p_alternative(t):
 #grammar for loop stmt
 def p_loop_stmt(t):
   'loop_stmt : iteration basic_loop id_opt SEMI_COLON'
-  t[0] = WhileStatement(None,t[1],t[2],t[3], lineno=t.lexer.lineno(4))
+  t[0] = WhileStatement(None,t[1],t[2],t[3], lineno=t.lexer.lineno)
   pass
 
 def p_iteration(t):
@@ -305,9 +306,9 @@ def p_iteration1(t):
 def p_iteration2(t):
   'iteration : iter_part reverse_opt discrete_range'
   if t[3][0] != None:
-    t[0]=Forloop(VariableDeclaration(t[1],Typename(t[3][0], lineno=t.lexer.lineno(1)),None,None, lineno=t.lexer.lineno(1)),t[2],t[3][1], lineno=t.lexer.lineno(1))
+    t[0]=Forloop(VariableDeclaration(t[1],Typename(t[3][0], lineno=t.lexer.lineno),None,None, lineno=t.lexer.lineno),t[2],t[3][1], lineno=t.lexer.lineno)
   else :
-    t[0]=Forloop(VariableDeclaration(t[1],Typename('integer'),None,None, lineno=t.lexer.lineno(1)),t[2],t[3][1], lineno=t.lexer.lineno(1))
+    t[0]=Forloop(VariableDeclaration(t[1],Typename('integer'),None,None, lineno=t.lexer.lineno),t[2],t[3][1], lineno=t.lexer.lineno)
   pass
 
 def p_iter_part(t):
@@ -438,45 +439,38 @@ def p_object_decl(t): #donedone
 
 #pushing in symbol table
   list1 = []
-  if DEBUG :
-    print table_current.symbols.keys()
+  # if DEBUG :
+    # print table_current.symbols.keys()
   #to AST   
   for i in t[1]:
     if isinstance(t[4], Unconstrarray) or isinstance(t[4],Constrarray) :
-      list1.append([VariableDeclaration(i,Typename('array'),t[5],t[4],lineno=t.lexer.lineno(2))])
+      list1.append(VariableDeclaration(i,Typename('array'),t[5],t[4],lineno=t.lexer.lineno))
     elif isinstance(t[4],tuple) :
-<<<<<<< HEAD
-      list1.append([VariableDeclaration(i,t[4][0],t[5],t[4][1],lineno=t.lineno(2))])
-    else:
-      list1.append([VariableDeclaration(i,t[4],t[5],None,lineno=t.lineno(2))])
-  p[0] = list1
-=======
-      list1.append([VariableDeclaration(i,t[4][0],t[5],t[4][1],lineno=t.lexer.lineno(2))])
+      list1.append(VariableDeclaration(i,t[4][0],t[5],t[4][1],lineno=t.lexer.lineno))
     else :
-      list1.append([VariableDeclaration(i,t[4],t[5],None,lineno=t.lexer.lineno(2))])
+      list1.append(VariableDeclaration(i,t[4],t[5],None,lineno=t.lexer.lineno))
   t[0] = list1
->>>>>>> c951d36b2e00f933978f45ddfc3e017581638c35
 
-  #to insert in symbol table
-  for i in t[1]:
-    if i[1] not in table_current.symbols.keys():
-        if DEBUG :
-          print 'adding symbol '+ i[1]
-        if t[4][0] == 'StringExp':
-          if t[4][4] == 'INTEGER':
-            table_current.symbols[i[1]] = ['ObjectTy', Integer(None), t.lexer.lineno, t[3], t[4], t[5]]
-          elif t[4][4] == 'CHARACTER':
-            table_current.symbols[i[1]] = ['ObjectTy', Character(None), t.lexer.lineno, t[3], t[4], t[5]]
-          elif t[4][4] == 'BOOLEAN':
-            table_current.symbols[i[1]] = ['ObjectTy', Boolean(None), t.lexer.lineno, t[3], t[4], t[5]]
-          elif t[4][4] == 'FLOAT':
-            table_current.symbols[i[1]] = ['ObjectTy', Float(None), t.lexer.lineno, t[3], t[4], t[5]]
-        elif t[4][0] == 'ConarraydefExp' :
-          #TODO array constraint can be a name of a type
-          #TODO make ranges of the class declared in type.py. Currently range is given as ast of the subtree
-          table_current.symbols[i[1]] = ['ObjectTy', Array(t[4][4][4], t[4][3]), t.lexer.lineno, t[3], t[4], t[5]]
-    else:
-      print 'error : redeclaration of variable ' + i[1] + ' on line number ' + str(i[0])
+  # #to insert in symbol table
+  # for i in t[1]:
+  #   if i[1] not in table_current.symbols.keys():
+  #       if DEBUG :
+  #         print 'adding symbol '+ i[1]
+  #       if t[4][0] == 'StringExp':
+  #         if t[4][4] == 'INTEGER':
+  #           table_current.symbols[i[1]] = ['ObjectTy', Integer(None), t.lexer.lineno, t[3], t[4], t[5]]
+  #         elif t[4][4] == 'CHARACTER':
+  #           table_current.symbols[i[1]] = ['ObjectTy', Character(None), t.lexer.lineno, t[3], t[4], t[5]]
+  #         elif t[4][4] == 'BOOLEAN':
+  #           table_current.symbols[i[1]] = ['ObjectTy', Boolean(None), t.lexer.lineno, t[3], t[4], t[5]]
+  #         elif t[4][4] == 'FLOAT':
+  #           table_current.symbols[i[1]] = ['ObjectTy', Float(None), t.lexer.lineno, t[3], t[4], t[5]]
+  #       elif t[4][0] == 'ConarraydefExp' :
+  #         #TODO array constraint can be a name of a type
+  #         #TODO make ranges of the class declared in type.py. Currently range is given as ast of the subtree
+  #         table_current.symbols[i[1]] = ['ObjectTy', Array(t[4][4][4], t[4][3]), t.lexer.lineno, t[3], t[4], t[5]]
+  #   else:
+  #     print 'error : redeclaration of variable ' + i[1] + ' on line number ' + str(i[0])
 
 def p_def_id_s1(t):
   'def_id_s : def_id'
@@ -541,10 +535,10 @@ def p_number_decl(t):
 def p_type_decl(t):
   #discrim_part not implemented
   'type_decl : TYPE IDENTIFIER type_completion SEMI_COLON'
-  t[0] = [TypeDeclaration(t[2], t[3][0],None, t[3][1], lineno=t.lexer.lineno(1))]
+  t[0] = [TypeDeclaration(t[2], t[3][0],None, t[3][1], lineno=t.lexer.lineno)]
 
   # '''type_decl : TYPE IDENTIFIER discrim_part_opt type_completion SEMICOLON'''
-  # t[0] = [TypeDeclaration(p[2], p[4][0],None, p[4][1], lineno=p.lineno(1))]
+  # t[0] = [TypeDeclaration(p[2], p[4][0],None, p[4][1], lineno=p.lineno)]
 
   pass
 
@@ -587,7 +581,7 @@ def p_enumeration_type(t):
 
 def p_enum_id_s(t):
   'enum_id_s : enum_id'
-  t[0] = Enum([t[1]], lineno=t.lexer.lineno(1))
+  t[0] = Enum([t[1]], lineno=t.lexer.lineno)
 
   pass
 def p_enum_id_s1(t):
@@ -605,12 +599,12 @@ def p_enum_id(t):
 
 def p_integer_type(t):
   'integer_type : range_spec'
-  t[0] = Integertype(t[1], None, lineno=t.lexer.lineno(1))
+  t[0] = Integertype(t[1], None, lineno=t.lexer.lineno)
 
   pass
 def p_integer_type1(t):
   'integer_type : MOD expression'
-  t[0] = Integertype(None, t[2], lineno=t.lexer.lineno(1))
+  t[0] = Integertype(None, t[2], lineno=t.lexer.lineno)
   pass
 
 def p_range_spec_opt(t):
@@ -633,17 +627,17 @@ def p_range_constraint(t):
   pass
 def p_range1(t):
   'range : simple_expression DOT_DOT simple_expression'
-  t[0]=Doubledotrange(t[1],t[3], lineno=t.lexer.lineno(2))
+  t[0]=Doubledotrange(t[1],t[3], lineno=t.lexer.lineno)
 
 #  t[0] = ['OpExp', t.lexer.lineno, t[1], t[2], t[3]]
 
 def p_range2(t):
   'range : name TICK RANGE'
-  t[0]=Nametick(LoadLocation(Location(t[1])),None,lineno=t.lexer.lineno(2))
+  t[0]=Nametick(LoadLocation(Location(t[1])),None,lineno=t.lexer.lineno)
 
 def p_range3(t):
   'range : name TICK RANGE BRA_OPEN expression BRA_CLOSE'
-  t[0]=Nametick(LoadLocation(Location(t[1])),t[5],lineno=t.lexer.lineno(2))
+  t[0]=Nametick(LoadLocation(Location(t[1])),t[5],lineno=t.lexer.lineno)
 
 #  t[0] = t[1]
   pass
@@ -657,17 +651,17 @@ def p_real_type(t):
 
 def p_float_type(t):
   'float_type : DIGITS expression range_spec_opt'
-  t[0] = Floattype(t[2], t[3], lineno=t.lexer.lineno(1))
+  t[0] = Floattype(t[2], t[3], lineno=t.lexer.lineno)
   pass
 
 def p_fixed_type(t):
   'fixed_type : DELTA expression range_spec'
-  t[0] = Fixedtype(t[2], t[3], None, lineno=t.lexer.lineno(1))
+  t[0] = Fixedtype(t[2], t[3], None, lineno=t.lexer.lineno)
   pass
 
 def p_fixed_type1(t):
   'fixed_type : DELTA expression DIGITS expression range_spec_opt'
-  t[0] = Fixedtype(t[2], t[5], t[4], lineno=t.lexer.lineno(1))
+  t[0] = Fixedtype(t[2], t[5], t[4], lineno=t.lexer.lineno)
   pass
 
 def p_array_type(t): #donedone
@@ -679,17 +673,13 @@ def p_array_type(t): #donedone
 
 def p_unconstr_array_type(t):
   'unconstr_array_type : ARRAY BRA_OPEN index_s BRA_CLOSE OF component_subtype_def'
-<<<<<<< HEAD
-  t[0] = Unconstrarray(t[3],t[6][0],t[6][1][0], lineno=t.lineno(1))
-=======
-  t[0] = Unconstrarray(t[3],t[6][0],t[6][1][0], lineno=t.lexer.lineno(1))
->>>>>>> c951d36b2e00f933978f45ddfc3e017581638c35
+  t[0] = Unconstrarray(t[3],t[6][0],t[6][1][0], lineno=t.lexer.lineno)
 #  t[0] = ['UnconarraydefExp', t.lexer.lineno, t[3], t[6]]
   pass
 
 def p_index_s(t):
   'index_s : index'
-  t[0]=Indexs([t[1]], lineno=t.lexer.lineno(1))
+  t[0]=Indexs([t[1]], lineno=t.lexer.lineno)
 
 #  t[0] = ['ExpList', t.lexer.lineno, t[1], None]
   pass
@@ -702,7 +692,7 @@ def p_index_s1(t):
 
 def p_index(t):
   'index : name RANGE BOX'
-  t[0] = LoadLocation(Location(t[1], lineno=t.lexer.lineno(2)), lineno=t.lexer.lineno(2))
+  t[0] = LoadLocation(Location(t[1], lineno=t.lexer.lineno), lineno=t.lexer.lineno)
   pass
 
 def p_component_subtype_def(t):
@@ -723,7 +713,7 @@ def p_aliased_opt1(t):
 
 def p_constr_array_type(t):#done
   'constr_array_type : ARRAY iter_index_constraint OF component_subtype_def'
-  t[0] = Constrarray(t[2],t[4][0],t[4][1][0], lineno=t.lexer.lineno(1))
+  t[0] = Constrarray(t[2],t[4][0],t[4][1][0], lineno=t.lexer.lineno)
 
 #  t[0] = ['ConarraydefExp', Nill(), t.lexer.lineno, t[2], t[4]]
 
@@ -737,7 +727,7 @@ def p_iter_index_constraint(t):
 def p_iter_discrete_range_s1(t):
   'iter_discrete_range_s : discrete_range'
   if t[1][0] != None :
-    t[0] = [(Typename(t[1][0], lineno=t.lexer.lineno(1)),t[1][1])]
+    t[0] = [(Typename(t[1][0], lineno=t.lexer.lineno),t[1][1])]
   else :
     t[0]=[t[1]]
  # t[0] = ['ExpList', t.lexer.lineno, t[1]]
@@ -746,7 +736,7 @@ def p_iter_discrete_range_s2(t):
   'iter_discrete_range_s : iter_discrete_range_s COMMA discrete_range'
   t[0] = t[1]
   if t[3][0] != None :
-      t[0].append((Typename(t[3][0], lineno=t.lexer.lineno(2)),t[3][1]))
+      t[0].append((Typename(t[3][0], lineno=t.lexer.lineno),t[3][1]))
   else :
       t[0].append(t[3])
 #  t[0] = ['ExpList', t.lexer.lineno, t[3], t[1]]
@@ -766,27 +756,26 @@ def p_discrete_range1(t):
 def p_subtype_decl(t):
   'subtype_decl : SUBTYPE IDENTIFIER IS subtype_ind SEMI_COLON'
   #checkThis
-  t[0] = [SubTypeDeclaration(t[2],t[4][0],None,t[4][1], lineno=t.lexer.lineno(3))]
+  t[0] = [SubTypeDeclaration(t[2],t[4][0],None,t[4][1], lineno=t.lexer.lineno)]
 
   pass
 #  t[0] = ['NameConstr', t.lexer.lineno, t[1], t[2]]
 
-def p_subtype_ind(t): #donedone
-  'subtype_ind : name constraint'
-  print "Not implemented constraint in declaration"
-  if isinstance(t[1],tuple) :
-    t[0] = (Typename(t[1][0], lineno=t.lexer.lineno(1)), t[1][1],None)
-  else :
-    t[0] = (Typename(t[1], lineno = t.lexer.lineno(1)),None)
-  pass
 
 def p_subtype_ind1(t):
   'subtype_ind : name'
   if isinstance(t[1],tuple) :
-    t[0] = (Typename(t[1][0], lineno=t.lexer.lineno(1)), t[1][1],None)
+    t[0] = (Typename(t[1][0], lineno=t.lexer.lineno), t[1][1],None)
   else :
-    t[0]=(Typename(t[1], lineno=t.lexer.lineno(1)),t[2])
-  pass
+    t[0] = (Typename(t[1],lineno = t.lexer.lineno),None)
+
+def p_subtype_ind2(t):
+  'subtype_ind : name constraint'
+  if isinstance(t[1],tuple) :
+    t[0] = (Typename(t[1][0], lineno=t.lexer.lineno),t[1][1],t[2])
+  else :
+    p[0]=(Typename(t[1], lineno=t.lexer.lineno(1)),t[2])
+
 
 def p_constraint(t):
   '''constraint : range_constraint
@@ -830,9 +819,9 @@ def p_subprog_spec1(t):
   t[0] = (t[2],None,t[3])
   #create new symbol table for new scope
   global table_current
-  table = symtable(table_current)
-  table_current.symbols[t[2]] = table
-  table_current = table
+  # table = symtable(table_current)
+  # table_current.symbols[t[2]] = table
+  # table_current = table
 
   
 
@@ -842,10 +831,10 @@ def p_subprog_spec2(t):
     print 'started function ' + t[2]
   t[0] = (t[2],Typename(t[5], lineno=t.lexer.lineno),t[3])
 
-  global table_current
-  table = symtable(table_current)
-  table_current.symbols[t[2]] = table
-  table_current = table
+  # global table_current
+  # table = symtable(table_current)
+  # table_current.symbols[t[2]] = table
+  # table_current = table
 
 def p_subprog_spec3(t):
   'subprog_spec : FUNCTION designator'
@@ -876,7 +865,7 @@ def p_param_s(t):
   'param_s : param'
   t[0] = FuncParameterList(t[1], lineno = t.lexer.lineno)
 
-def p_param_s(t):
+def p_param_s1(t):
   'param_s : param_s SEMI_COLON param'
   t[0] = t[1]
   t[0].new_parameter(t[3])
@@ -902,7 +891,7 @@ def p_mode(t):
           | IN OUT
           | ACCESS
           '''
-  t[0] = t[1]
+  t[0] = None
   pass
 
 
@@ -963,10 +952,10 @@ def p_subprog_body(t): #chalu
   'subprog_body : subprog_spec IS decl_part block_body END id_opt SEMI_COLON'
 
   #table_current = symtable(NULL)
-  # t[0]=FuncStatement(t[1],p[2],p[1][2],p[2],p[3],p[5], lineno=p.lineno(4))
+  # t[0]=FuncStatement(t[1],p[2],p[1][2],p[2],p[3],p[5], lineno=p.lineno)
   #     '''subprog_body : subprog_spec_is_push decl_part block_body END id_opt SEMICOLON'''
-  #   p[0]=FuncStatement(p[1][0],p[1][1],p[1][2],p[2],p[3],p[5], lineno=p.lineno(4))
-  t[0]=FuncStatement(t[1][0],t[1][1],t[1][2],t[3],t[4],t[6], lineno=t.lexer.lineno(4));
+  #   p[0]=FuncStatement(p[1][0],p[1][1],p[1][2],p[2],p[3],p[5], lineno=p.lineno)
+  t[0]=FuncStatement(t[1][0],t[1][1],t[1][2],t[3],t[4],t[6], lineno=t.lexer.lineno);
 
   pass
 
@@ -974,15 +963,10 @@ def p_end_subprog(t):
   'end_subprog : '
   if DEBUG :
     print 'ended subprogram '+t[2][3]
-<<<<<<< HEAD
-  # global table_current
-  # table_current = table_current.parent
-=======
   t[0] = (t[1], t[2], t[3])
 
-  global table_current
-  table_current = table_current.parent
->>>>>>> c951d36b2e00f933978f45ddfc3e017581638c35
+  # global table_current
+  # table_current = table_current.parent
 
   pass
 #grammar for name
@@ -1014,7 +998,7 @@ def p_name_opt(t):
   pass
 
 def p_name_opt1(t):
-  'name_opt :name'
+  'name_opt : name'
   t[0] = t[1]
   pass
 
@@ -1045,7 +1029,7 @@ def p_selected_comp2(t):
 
 def p_used_char(t):
   'used_char : CHARACTER'
-  t[0] = ['StringExp', Character(t[1]), t.lexer.lineno, table_current, t[1]]
+  #t[0] = ['StringExp', Character(t[1]), t.lexer.lineno, table_current, t[1]]
   pass
 
 def p_operator_symbol(t):
@@ -1076,7 +1060,7 @@ def p_when_opt1(t):
 #grammar for value
 def p_value_s1(t):
   'value_s : value'
-  t[0] = ['ExpList', t[1]]
+  t[0]=Values([t[1]], lineno=t.lineno(1))
   pass
 
 def p_value_s2(t):
@@ -1115,7 +1099,7 @@ def p_choice(t):
 
 def p_discrete_with_range1(t):
   'discrete_with_range : name range_constraint'
-  t[0] = (Typename(t[1], lineno=t.lexer.lineno(1)),t[2])
+  t[0] = (Typename(t[1], lineno=t.lexer.lineno),t[2])
 
 #  t[0] = t[1]
 def p_discrete_with_range2(t):
@@ -1144,7 +1128,7 @@ def p_expression2(t):
   '''expression : expression logical relation
                 | expression short_circuit relation
                 '''
-  t[0]=Relop(t[2],t[1],t[3], lineno=t.lexer.lineno(2))
+  t[0]=Relop(t[2],t[1],t[3], lineno=t.lexer.lineno)
 
   # if(t[1][1].name != "Boolean"):
   #   print 'error on line number '+str(t.lexer.lineno)+': type should be boolean'
@@ -1160,7 +1144,7 @@ def p_relation2(t):
   '''realtion : simple_expression relational simple_expression
               | simple_expression membership range
               '''
-  t[0] = Relop(t[2],t[1],t[3], lineno=t.lexer.lineno(2))
+  t[0] = Relop(t[2],t[1],t[3], lineno=t.lexer.lineno)
 
   # if(t[1][1].name != t[3][1].name):
   #   print 'type error on line number '+str(t.lexer.lineno)+': incompatible types'
@@ -1169,14 +1153,14 @@ def p_relation2(t):
 def p_relation3(t):
   'relation : simple_expression membership name'
   #TODO check name should be subtype and type checking
-  t[0] = Relop(t[2],t[1],LoadLocation(Location(t[3], lineno=t.lexer.lineno(2)), lineno=t.lexer.lineno(2)), lineno=t.lexer.lineno(2))
+  t[0] = Relop(t[2],t[1],LoadLocation(Location(t[3], lineno=t.lexer.lineno), lineno=t.lexer.lineno), lineno=t.lexer.lineno)
 
 #  t[0] = ['OpExp', Boolean(None), t.lexer.lineno, t[1], t[2], t[3]]
 
 
 def p_simple_expression1(t): #donedonedone
   'simple_expression : unary term'
-  t[0] = Unaryop(t[1],t[2], lineno=t.lexer.lineno(2))
+  t[0] = Unaryop(t[1],t[2], lineno=t.lexer.lineno)
 
   #t[0] = ['UnaryOpExp', t[2][1], t.lexer.lineno, t[1], t[2]]
   pass
@@ -1188,7 +1172,7 @@ def p_simple_expression2(t):
 
 def p_simple_expression3(t):
   'simple_expression : simple_expression adding term'
-  t[0] = Binop(t[2],t[1],t[3], lineno=t.lexer.lineno(2))
+  t[0] = Binop(t[2],t[1],t[3], lineno=t.lexer.lineno)
 
   # if(t[1][1].name != t[3][1].name):
   #   print "type error on line number "+str(t.lexer.lineno)+": incompatible types "+t[1][1].name+"and "+t[3][1].name
@@ -1222,7 +1206,7 @@ def p_term1(t): #donedone
 
 def p_term2(t):
   'term : term multiplying factor'
-  t[0] = Binop(t[2],t[1],t[3], lineno=t.lexer.lineno(2))
+  t[0] = Binop(t[2],t[1],t[3], lineno=t.lexer.lineno)
  
   # if(t[1][1].name != t[3][1].name):
   #   print "type error on line number "+str(t.lexer.lineno)+": incompatible types "+t[1][1].name+"and "+t[3][1].name
@@ -1252,7 +1236,7 @@ def p_factor2(t):
   '''factor : NOT primary
             | ABS primary
             '''
-  t[0] = Unaryop(t[1],t[2], lineno=t.lexer.lineno(1))
+  t[0] = Unaryop(t[1],t[2], lineno=t.lexer.lineno)
 
   # if(t[2][1].name != "Boolean"):
   #   print "type error on line number "+str(t.lexer.lineno)+": type should be Boolean"
@@ -1260,7 +1244,7 @@ def p_factor2(t):
 
 def p_factor3(t):
   'factor : primary EXPONENT primary'
-  t[0] = Binop(t[2],t[1],t[3], lineno=t.lexer.lineno(2))
+  t[0] = Binop(t[2],t[1],t[3], lineno=t.lexer.lineno)
 
   # if(t[1][1].name != t[3][1].name):
   #   print "type error on line number "+str(t.lexer.lineno)+": incompatible types "+t[1][1].name+"and "+t[3][1].name
@@ -1286,9 +1270,9 @@ def p_primary2(t): #flagflag
              | qualified
              '''
   if isinstance(t[1],tuple):
-        t[0] = FuncCall(t[1][0],t[1][1], lineno=t.lexer.lineno(1))
+        t[0] = FuncCall(t[1][0],t[1][1], lineno=t.lexer.lineno)
   else :
-        t[0] = LoadLocation(Location(t[1], lineno=t.lexer.lineno(1)), lineno=t.lexer.lineno(1))
+        t[0] = LoadLocation(Location(t[1], lineno=t.lexer.lineno), lineno=t.lexer.lineno)
   # if t[1][0] == 'StringExp':
   #   identifier = table_current.lookup(t[1][4])
   #   if(identifier == None):
@@ -1320,7 +1304,7 @@ def p_allocator (t):
 
 def p_literal1(t):
   'literal : NUMBER '
-  t[0]=Literal(t[1], lineno=t.lexer.lineno(1))
+  t[0]=Literal(t[1], lineno=t.lexer.lineno)
 
   # if(t[1].find('.') == -1):
   #   t[0] = ['NumberExp', Integer(t[1]), t.lexer.lineno, t[1]]
@@ -1329,12 +1313,12 @@ def p_literal1(t):
 
 def p_literal2(t):
   'literal : used_char'
-  t[0]=Literal(t[1], lineno=t.lexer.lineno(1))
+  t[0]=Literal(t[1], lineno=t.lexer.lineno)
 
 
 def p_literal3(t):
   'literal : NULL'
-  t[0]=Literal(t[1], lineno=t.lexer.lineno(1))
+  t[0]=Literal(t[1], lineno=t.lexer.lineno)
 
 #  t[0] = ['NullExp', Null(), t.lexer.lineno, t[1]] 
   pass
@@ -1405,6 +1389,9 @@ def main():
   f = open(fileName, 'r')
   parser = make_parser()
   result = parser.parse(f.read())
+  for depth,node in flatten(result):
+    print("%s%s" % (" "*(4*depth),node))  
+
 
 DEBUG = 0
 lexer = adalex.make_lexer()

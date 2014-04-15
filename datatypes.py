@@ -15,6 +15,7 @@ class Integer():
   rel_opcodes = {"=": "seq", "/=": "sne", ">": "sgt", "<": "slt", ">=": "sge", "<=": "sle","in":"in","notin":"notin"}
   #rel_folds = {"=": operator.eq, "/=": operator.ne, ">": operator.gt, ">=": operator.ge,
   #           "<": operator.lt, "<=": operator.le}
+  default = int() 
 
 class Float():
   name = 'Float'
@@ -28,16 +29,21 @@ class Float():
   rel_opcodes={"=": "seq.s", "/=": "sne.s", ">": "sgt.s", "<": "slt.s", ">=": "sge.s", "<=": "sle.s"}
   # rel_folds={"=": operator.eq, "/=": operator.ne, ">": operator.gt, ">=": operator.ge,
   #            "<": operator.lt, "<=": operator.le}
+  default = float() 
+
 
 class String():
   name = "String"
   binary = {"&"}
   binary_opcodes={"&":"ampersand"}
   #binary_folds={"&": operator.add}
+  default = str() 
 
 
 class Character():
-	name="Character"
+  name="Character"
+  default = chr(0)
+
 class Boolean():
   name = "Boolean"
   unary={"!"},
@@ -46,9 +52,12 @@ class Boolean():
   #rel_folds={"=": operator.eq, "/=": operator.ne, "&&": operator.and_, "||": operator.or_},
   unary_opcodes={"!": "not"},
   #unary_folds={"!": operator.not_}
+  default = bool() 
 
 class Array():
- name = "Array"
+  name = "Array"
+  default = list()
 
 class Enumeration():
-	name = "Enum"
+  name = "Enum"
+  default = None

@@ -14,7 +14,7 @@ class symtable():
 		table = self
 		while table.parent != None:
 			if name in table.symbols.keys():
-				return table[name]
+				return table.symbols[name]
 			table = table.parent
 		return None	
 	def return_type():

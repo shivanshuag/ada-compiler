@@ -20,27 +20,30 @@ class typecheck():
   Arr = Array()
   types = {
    "INTEGER": Int,
-   "Float": Float,
+   "FLOAT": Float,
    "CHARACTER": Char,
    "BOOLEAN": Bool,
    "STRING": Str,
    "ARRAY": Arr,
    "ENUMERATION": Enum
   }
+
   def check_goal_symbol(self,node):
-    self.check_compilation(node.compilation)
     self.table_current = symtable(None, node)
+    self.check_compilation(node.compilation)
 
   def check_compilation(self, node):
     for comp_unit in node.comp_unit:
-      self.check_comp_unit(comp_unit)
+      self.check(comp_unit)
 
   def check_comp_unit(self,node):
-    node.table = symtable(self.table_current)
+    node.table = symtable(self.table_current, node)
     self.table_current = node.table
     for statement in node.statements.statements:
       self.check(statement)
-      #TODO add to symtable
+    if isinstance(statement, AssignmentStatement):
+      self.table_current[statement.location.name] = statement.expr
+
 
   def check_AssignmentStatement(self,node):
     table_entry = self.table_current.lookup(node.location.name)
@@ -52,31 +55,33 @@ class typecheck():
     if table_entry.typename.check_type == Enum :
       if node.expr.location.name not in table_entry.length.enum_id :
         self.error(node.lineno,"Not an enum values")
-      else :
+    else :
         #removed because records not implemented
-        # if isinstance(node.expr,list):
-        #         for e in node.expr :
-        #             self.visit(e)
-        #         if len(node.expr) != len((table_entry.length.record_def)[0].comp_decls) :
-        #             error(node.lineno, "Length does not match")
-        #         else :
-        #             for i in range(0,len(node.expr)):
-        #                 if ((table_entry.length.record_def)[0].comp_decls)[i].typename.check_type != (node.expr)[i].check_type :
-        #                     error(node.lineno, "Type doesn't match")
-        #     else :
+      if isinstance(node.expr,list):
+        for e in node.expr :
+          self.check(e)
+              # if len(node.expr) != len((table_entry.length.record_def)[0].comp_decls) :
+              #     error(node.lineno, "Length does not match")
+              # else :
+              #     for i in range(0,len(node.expr)):
+              #         if ((table_entry.length.record_def)[0].comp_decls)[i].typename.check_type != (node.expr)[i].check_type :
+              #             error(node.lineno, "Type doesn't match")
+      else :
         self.check(node.expr)
-        #if assignment while declaration
-        if isinstance(table_entry, VariableDeclaration):
-          if hasattr(table_entry, "check_type") and hasattr(node.expr, "check_type"):
-            if table_entry.check_type != node.expr.check_type:
-              self.error(node.lineno, "Cannot assign"+value_type.typename+" to "+declared_type.typename)
-              return
-        #otherwise
-        if hasattr(node.location, "check_type") and hasattr(node.expr, "check_type"):
-          declared_type = node.location.check_type
-          value_type = node.expr.check_type
-          if declared_type != value_type:
-            self.error(node.lineno, "Cannot assign "+value_type.typename+" to "+declared_type.typename)
+      #if assignment while declaration
+    if isinstance(table_entry, VariableDeclaration):
+      if hasattr(table_entry, "check_type") and hasattr(node.expr, "check_type"):
+        declared_type = table_entry.check_type
+        value_type = node.expr.check_type
+        if declared_type != value_type:
+          self.error(node.lineno, "Cannot assign"+str(value_type)+" to "+str(declared_type))
+          return
+    #otherwise
+    if hasattr(node.location, "check_type") and hasattr(node.expr, "check_type"):
+      declared_type = node.location.check_type
+      value_type = node.expr.check_type
+      if declared_type != value_type:
+        self.error(node.lineno, "Cannot assign "+value_type.typename+" to "+declared_type.typename)
 
   def check_ArrayAssignmentStatement(self,node):
     # if not self.inside_function():
@@ -176,9 +181,10 @@ class typecheck():
   def check_Forloop(self,node):
     #node.scope_level = self.environment.scope_level()
     #self.environment.push(node)
-    self.check(node.name)
     self.table_current = symtable(self.table_current, node)
+    self.check(node.name)
     #self.environment.add_root(node.name.name, node.name)
+    self.table_current.parent.symbols[node.name.name] = node.name
     self.check(node.discrete_range)
     if hasattr(node.name, "check_type") and hasattr(node.discrete_range, "check_type"):
       if node.name.check_type == node.discrete_range.check_type :
@@ -267,10 +273,10 @@ class typecheck():
         if node.expr is None:
           default = node.typename.check_type.default
           node.expr = Literal(default,lineno=node.lineno)
-          node.checkexpr.check_type = node.typename.check_type
+          node.expr.check_type = node.typename.check_type
         self.check(node.expr)
         if node.typename.check_type != node.expr.check_type:
-          self.error(node.lineno, "Cannot assign "+node.typename.check_type+" to "+node.expr.check_type)
+          self.error(node.lineno, "Cannot assign "+str(node.typename.check_type)+" to "+str(node.expr.check_type))
       self.table_current.symbols[node.name] = node
       if hasattr(node.typename, "check_type"):
         node.check_type = node.typename.check_type
@@ -371,11 +377,13 @@ class typecheck():
     node.check_type = node.subtype_ind.check_type
 
   def check_Typename(self,node):
-    table_entry = self.table_current.lookup(node.name)
-    node.check_type = table_entry
-    if not isinstance(table_entry, Integer) and not isinstance(table_entry, Float) and not isinstance(table_entry, Boolean) and not isinstance(table_entry, Array) and not isinstance(table_entry, String) and not isinstance(table_entry, Enumeration) and not isinstance(table_entry, Character):
-      self.error(node.lineno, node.name+" is not a valid type")
-
+    if node.name not in self.types.keys():
+      self.error(node.lineno, str(node.name)+" is not a valid type")
+      datatype = None
+    else:
+      datatype = self.types[node.name]
+    node.check_type = datatype
+      
   def check_Location(self,node):
       table_entry = self.table_current.lookup(node.name)
       if not table_entry:
@@ -383,15 +391,15 @@ class typecheck():
       node.check_type = table_entry.check_type
 
   def check_LoadLocation(self, node):
-    if node.location.name == 'newline':
+    if node.location.name == 'NEWLINE':
       return
     table_entry = self.table_current.lookup(node.location.name)
     if not table_entry:
       self.error(node.lineno, "name "+node.location.name+" not found")
     else:
-      if not isinstance(table_entry, Integer) and not isinstance(table_entry, Float) and not isinstance(table_entry, Boolean) and not isinstance(table_entry, Array) and not isinstance(table_entry, String) and not isinstance(table_entry, Enumeration) and not isinstance(table_entry, Character):
-        self.error(node.lineno, "cannot use "+table_entry.typename+" outside of variable declarations")
-        return
+      # if not isinstance(table_entry, Integer) and not isinstance(table_entry, Float) and not isinstance(table_entry, Boolean) and not isinstance(table_entry, Array) and not isinstance(table_entry, String) and not isinstance(table_entry, Enumeration) and not isinstance(table_entry, Character):
+      #   self.error(node.lineno, "cannot use "+table_entry.typename.name+" outside of variable declarations")
+      #   return
       if isinstance(table_entry,FuncStatement):
         node.check_type = None
         pass
@@ -402,15 +410,17 @@ class typecheck():
         node.check_type = check_type
 
   def check_Literal(self,node):
+    typemap={int:self.Int, float:self.Float, str:self.Str, bool:self.Bool, list:self.Arr}
     valtype = type(node.value)
-    check_type = self.types.get(valtype, None)
+    check_type = typemap.get(valtype, None)
     if check_type is None:
-      self.error(node.lineno, "Using unrecognized type "+valtype)
-    if check_type==String and len(node.value)==1 :
-      check_type = Char
+      error(node.lineno, "Using unrecognized type {}".format(valtype))
+    if check_type==self.Str and len(node.value)==1 :
+      check_type = self.Char
     node.check_type = check_type
 
-  def check_Value_s(self, node):
+
+  def check_Values(self, node):
     for argument in node.arguments:
       if isinstance(argument,tuple):
         if argument[0] is not None :
@@ -460,18 +470,24 @@ class typecheck():
       self.error(node.lineno, "Redefining function "+node.name+"is not allowed")
     else :
       if node.id!=None and node.name != node.id :
-          self.error(node.lineno, "Label does not match")
+        self.error(node.lineno, "Label does not match")
       #TODO check why add_root is needed
+      self.table_current.parent.symbols[node.name] = node
       #self.environment.add_root(node.name, node)
     if node.returntype is not None :
       self.check(node.returntype)
       if hasattr(node.returntype, "check_type"):
         node.check_type = node.returntype.check_type
     self.check(node.parameters)
-    for declarations in node.decl_part:
+    for declarations in node.declpart:
+      print declarations.__class__.__name__
       self.check(declarations)
     self.check(node.statements)
     self.table_current = self.table_current.parent
+
+  def check_Statements(self, node):
+    for statement in node.statements:
+      self.check(statement)
 
   def check_FuncParameterList(self, node):
     for parameter in node.parameters:
@@ -527,14 +543,82 @@ class typecheck():
                 return
               arg.parm = parm
 
-  def error(msg, lineno):
+  def check_Unaryop(self,node):
+    self.check(node.expr)
+    check_type = self.check_type_unary(node, node.op, node.expr)
+    node.check_type = check_type
+
+  def check_Binop(self,node):
+    self.check(node.left)
+    self.check(node.right)
+    check_type = self.check_type_binary(node, node.op, node.left, node.right)
+    node.check_type = check_type
+
+  def check_Relop(self,node):
+    self.check(node.left)
+    self.check(node.right)
+    check_type = self.check_type_rel(node, node.op, node.left, node.right)
+    node.check_type = check_type
+
+  def check_type_unary(self, node, op, val):
+    if hasattr(val, "check_type"):
+      if op not in val.check_type.unary_ops:
+        error(node.lineno, "Unary operator "+op+" not supported")
+      return val.check_type
+
+  def check_type_binary(self, node, op, left, right):
+    if hasattr(left, "check_type") and hasattr(right, "check_type"):
+      if left.check_type != right.check_type:
+        error(node.lineno, "Binary operator "+op+" does not have matching LHS/RHS types")
+        return left.check_type
+      errside = None
+      if op not in left.check_type.binary_ops:
+        errside = "LHS"
+      if op not in right.check_type.binary_ops:
+        errside = "RHS"
+      if errside is not None:
+        error(node.lineno, "Binary operator "+op+" not supported on "+errside+" of expression")
+      return left.check_type
+
+  def check_type_rel(self, node, op, left, right):
+    if hasattr(left, "check_type") and hasattr(right, "check_type"):
+      if left.check_type != right.check_type:
+        error(node.lineno, "Relational operator "+op+" does not have matching LHS/RHS types")
+        return left.check_type
+      errside = None
+      if op not in left.check_type.rel_ops:
+        errside = "LHS"
+      if op not in right.check_type.rel_ops:
+        errside = "RHS"
+      if errside is not None:
+        error(node.lineno, "Relational operator "+op+" not supported on "+errside+" of expression")
+      return BoolType
+
+
+
+
+
+  def error(self, lineno, msg):
     print("type error on line number "+str(lineno)+": "+msg)
 
   def check(self, node):
-    function_name = 'check_' + node.__class__.__name__
-    function = getattr(self, function_name)
-    function(node)
+    if node is not None:
+      function_name = 'check_' + node.__class__.__name__
+      function = getattr(self, function_name)
+      function(node)
 
+
+def tracefunc(frame, event, arg, indent=[0]):
+      if event == "call":
+          indent[0] += 2
+          print "-" * indent[0] + "> call function", frame.f_code.co_name
+      elif event == "return":
+          print "<" + "-" * indent[0], "exit function", frame.f_code.co_name
+          indent[0] -= 2
+      return tracefunc
+
+import sys
+sys.settrace(tracefunc)
 
 
 def main():
