@@ -308,12 +308,12 @@ def p_iteration2(t):
   if t[3][0] != None:
     t[0]=Forloop(VariableDeclaration(t[1],Typename(t[3][0], lineno=t.lexer.lineno),None,None, lineno=t.lexer.lineno),t[2],t[3][1], lineno=t.lexer.lineno)
   else :
-    t[0]=Forloop(VariableDeclaration(t[1],Typename('integer'),None,None, lineno=t.lexer.lineno),t[2],t[3][1], lineno=t.lexer.lineno)
+    t[0]=Forloop(VariableDeclaration(t[1],Typename('INTEGER'),None,None, lineno=t.lexer.lineno),t[2],t[3][1], lineno=t.lexer.lineno)
   pass
 
 def p_iter_part(t):
   'iter_part : FOR IDENTIFIER IN'
-  t[0] = [2]
+  t[0] = t[2]
   pass
 
 def p_reverse_opt(t):
@@ -444,7 +444,7 @@ def p_object_decl(t): #donedone
   #to AST   
   for i in t[1]:
     if isinstance(t[4], Unconstrarray) or isinstance(t[4],Constrarray) :
-      list1.append(VariableDeclaration(i,Typename('array'),t[5],t[4],lineno=t.lexer.lineno))
+      list1.append(VariableDeclaration(i,Typename('ARRAY'),t[5],t[4],lineno=t.lexer.lineno))
     elif isinstance(t[4],tuple) :
       list1.append(VariableDeclaration(i,t[4][0],t[5],t[4][1],lineno=t.lexer.lineno))
     else :
@@ -537,10 +537,6 @@ def p_type_decl(t):
   'type_decl : TYPE IDENTIFIER type_completion SEMI_COLON'
   t[0] = [TypeDeclaration(t[2], t[3][0],None, t[3][1], lineno=t.lexer.lineno)]
 
-  # '''type_decl : TYPE IDENTIFIER discrim_part_opt type_completion SEMICOLON'''
-  # t[0] = [TypeDeclaration(p[2], p[4][0],None, p[4][1], lineno=p.lineno)]
-
-  pass
 
 def p_type_completion(t):
   'type_completion : '
@@ -555,22 +551,22 @@ def p_type_completion1(t):
 def p_type_def(t):
   # not implemented record_type, access_type, derived_type, private_type
   'type_def : enumeration_type'
-  t[0] = (Typename('enumeration'),t[1])
+  t[0] = (Typename('ENUMERATION'),t[1])
   pass
 
 def p_type_def1(t):
   'type_def : integer_type'
-  t[0] = (Typename('integer'),t[1])
+  t[0] = (Typename('INTEGER'),t[1])
   pass
 
 def p_type_def2(t):
   'type_def : real_type'
-  t[0] = (Typename('real'),t[1])
+  t[0] = (Typename('REAL'),t[1])
   pass
 
 def p_type_def3(t):
   'type_def : array_type'
-  t[0] = (Typename('array'),t[1])
+  t[0] = (Typename('ARRAY'),t[1])
   pass
 
 def p_enumeration_type(t):
@@ -774,7 +770,7 @@ def p_subtype_ind2(t):
   if isinstance(t[1],tuple) :
     t[0] = (Typename(t[1][0], lineno=t.lexer.lineno),t[1][1],t[2])
   else :
-    p[0]=(Typename(t[1], lineno=t.lexer.lineno(1)),t[2])
+    t[0]=(Typename(t[1], lineno=t.lexer.lineno),t[2])
 
 
 def p_constraint(t):
@@ -946,14 +942,8 @@ def p_body(t):
 
 def p_subprog_body(t): #chalu
   'subprog_body : subprog_spec IS decl_part block_body END id_opt SEMI_COLON'
-
-  #table_current = symtable(NULL)
-  # t[0]=FuncStatement(t[1],p[2],p[1][2],p[2],p[3],p[5], lineno=p.lineno)
-  #     '''subprog_body : subprog_spec_is_push decl_part block_body END id_opt SEMICOLON'''
-  #   p[0]=FuncStatement(p[1][0],p[1][1],p[1][2],p[2],p[3],p[5], lineno=p.lineno)
   t[0]=FuncStatement(t[1][0],t[1][1],t[1][2],t[3],t[4],t[6], lineno=t.lexer.lineno);
 
-  pass
 
 def p_end_subprog(t):
   'end_subprog : '
@@ -1025,8 +1015,8 @@ def p_selected_comp2(t):
 
 def p_used_char(t):
   'used_char : CHARACTER'
-  #t[0] = ['StringExp', Character(t[1]), t.lexer.lineno, table_current, t[1]]
-  pass
+  t[0] = t[1][1]
+
 
 def p_operator_symbol(t):
   'operator_symbol : STRING'
@@ -1056,7 +1046,7 @@ def p_when_opt1(t):
 #grammar for value
 def p_value_s1(t):
   'value_s : value'
-  t[0]=Values([t[1]], lineno=t.lineno(1))
+  t[0]=Values([t[1]], lineno=t.lineno)
   pass
 
 def p_value_s2(t):
@@ -1140,7 +1130,7 @@ def p_relation1(t):#donedone
   t[0] = t[1]
 
 def p_relation2(t):
-  '''realtion : simple_expression relational simple_expression
+  '''relation : simple_expression relational simple_expression
               | simple_expression membership range
               '''
   t[0] = Relop(t[2],t[1],t[3], lineno=t.lexer.lineno)
@@ -1335,7 +1325,6 @@ def p_value_s_2(t):
   '''value_s_2 : value COMMA value
                | value_s_2 COMMA value
                '''
-  pass
 
 def p_relational(t):
   '''relational : EQ
@@ -1346,7 +1335,6 @@ def p_relational(t):
                 | GRE_EQ
                 '''
   t[0] = t[1]
-  pass
 
 def p_membership1(t):
   'membership : IN'

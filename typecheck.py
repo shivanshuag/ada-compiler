@@ -30,7 +30,10 @@ class typecheck():
 
   def check_goal_symbol(self,node):
     self.table_current = symtable(None, node)
-    self.check_compilation(node.compilation)
+    if hasattr(node, "compilation"):
+      self.check_compilation(node.compilation)
+    else:
+      print "Please fix all the syntax errors and compile again"
 
   def check_compilation(self, node):
     for comp_unit in node.comp_unit:
@@ -84,9 +87,6 @@ class typecheck():
         self.error(node.lineno, "Cannot assign "+value_type.typename+" to "+declared_type.typename)
 
   def check_ArrayAssignmentStatement(self,node):
-    # if not self.inside_function():
-    #   self.error(node.lineno, "Cannot assign variable outside function body")
-    # else:
     table_entry = self.table_current.lookup(node.location.name)
     if not table_entry:
       self.error(node.lineno, "name "+node.location.name+" not defined")
@@ -94,27 +94,24 @@ class typecheck():
       self.check(node.args)
       self.check(node.expr)
       if isinstance(table_entry, VariableDeclaration):
-        if hasattr(table_entry.length.subtype_ind, "check_type") and hasattr(node.expr, "check_type"):    
-          declared_type = table_entry.length.subtype_ind.check_type
+        if hasattr(table_entry.length.subtypeind, "check_type") and hasattr(node.expr, "check_type"):    
+          declared_type = table_entry.length.subtypeind.check_type
           value_type = node.expr.check_type
           if declared_type != value_type:
             self.error(node.lineno, "Cannot assign "+value_type+" to "+declared_type)
         else:
-          if hasattr(table_entry.length.subtype_ind, "check_type") and hasattr(node.expr, "check_type"):
-            declared_type = table_entry.length.subtype_ind.check_type
+          if hasattr(table_entry.length.subtypeind, "check_type") and hasattr(node.expr, "check_type"):
+            declared_type = table_entry.length.subtypeind.check_type
             value_type = node.expr.check_type
             if declared_type != value_type:
               self.error(node.lineno, "Cannot assign "+value_type+" to "+declared_type)
 
 
   def check_ExitStatement(self,node):
-    # if not self.inside_function():
-    #   self.error(node.lineno, "Cannot use exit statement outside function body")
-    #   return
     self.check(node.name)
     if node.expr != None :
       self.check(node.expr)
-      if node.expr.check_type != Bool:
+      if node.expr.check_type != self.Bool:
         self.error(node.lineno, "Condition in a exit statement must be a boolean")
   
   def check_ReturnStatement(self, node):
@@ -124,22 +121,14 @@ class typecheck():
 
 
   def check_GotoStatement(self,node):
-    # if not self.inside_function():
-    #   error(node.lineno, "Cannot use goto statement outside function body")
-    #   return
     self.check(node.name)
+
   def check_ProcCall(self, node):
-    # if not self.inside_function():
-    #   error(node.lineno, "Cannot call function from outside function body; see main() for entry point")
-    #   return
     self.check(node.name)
 
   def check_IfStatement(self,node):
-    # if not self.inside_function():
-    #   error(node.lineno, "Cannot use if statement outside function body")
-    # else:
     self.check(node.expr)
-    if node.expr.check_type != Bool:
+    if node.expr.check_type != self.Bool:
       self.error(node.lineno, "Expression in if statement must evaluate to bool")
     if node.truebranch is not None:
       self.check(node.truebranch)
@@ -147,10 +136,6 @@ class typecheck():
       self.check(node.falsebranch)
     
   def check_CaseStatement(self,node):
-    # if not self.inside_function():
-    #   error(node.lineno, "Cannot define an case outside function body")
-    #   return
-    #print node.condition
     self.check(node.condition)
     for alternative in node.alternatives.alternatives :
       if alternative.choices.choices[0] != 'OTHERS':
@@ -180,34 +165,19 @@ class typecheck():
 
 
   def check_Forloop(self,node):
-    #node.scope_level = self.environment.scope_level()
     #self.environment.push(node)
     self.table_current = symtable(self.table_current, node)
     self.check(node.name)
-    #self.environment.add_root(node.name.name, node.name)
     self.table_current.parent.symbols[node.name.name] = node.name
-    self.check(node.discrete_range)
-    if hasattr(node.name, "check_type") and hasattr(node.discrete_range, "check_type"):
-      if node.name.check_type == node.discrete_range.check_type :
-        node.check_type = Bool
+    self.check(node.discreterange)
+    if hasattr(node.name, "check_type") and hasattr(node.discreterange, "check_type"):
+      if node.name.check_type == node.discreterange.check_type :
+        node.check_type = self.Bool
       else :
         self.error(node.lineno, "Expression in for statement must evaluate to bool")
     self.table_current = self.table_current.parent
 
   def check_WhileStatement(self, node):
-    # global counter
-    # if not self.inside_function():
-    #     error(node.lineno, "Cannot define a while outside function body")
-    #     return
-    # if not self.inside_function():
-    #     error(node.lineno, "Cannot use while statement outside function body")
-    # 
-    # if node.label ==  None :
-    #     while self.environment.lookup(counter) is not None :
-    #         counter+=1
-    #     node.label = counter
-    #     counter+=1
-    #else:
     flag = 1
     if node.label !=  None :
       if table_current.lookup(node.label) is not None:
@@ -221,23 +191,12 @@ class typecheck():
     self.table_current = symtable(self.table_current, node)
     self.check(node.expr)
     if node.expr != None :
-      if node.expr.check_type != Bool:
+      if node.expr.check_type != self.Bool:
         self.error(node.lineno, "Expression in while statement must evaluate to bool")
     self.check(node.truebranch)
     self.table_current = self.table_current.parent
 
   def check_Block(self,node):
-    # global counter
-    # if not self.inside_function():
-    #     error(node.lineno, "Cannot define a block outside function body")
-    #     return
-    # flag = 1
-    # if node.label ==  None :
-    #     while self.environment.lookup(counter) is not None :
-    #         counter+=1
-    #     node.label = counter
-    #     counter+=1
-    # else:
     flag = 1
     if node.label != None:
       if self.table_current.lookup(node.label) is not None:
@@ -256,9 +215,6 @@ class typecheck():
 
 
   def check_VariableDeclaration(self,node):
-    # if not self.inside_function():
-    #   error(node.lineno, "Cannot do variable declaration outside function body")
-    #   return
     if self.table_current.lookup(node.name) is not None:
       self.error(node.lineno, "redefining variable "+node.name+" is not allowed")
     else :
@@ -281,92 +237,70 @@ class typecheck():
       self.table_current.symbols[node.name] = node
       if hasattr(node.typename, "check_type"):
         node.check_type = node.typename.check_type
-    #node.scope_level = self.environment.scope_level()
 
-  def check_TypeDeclaration(self,node):
-    # if not self.inside_function():
-    #   error(node.lineno, "Cannot do type declaration outside function body")
-    #   return
-    if self.table_current.lookup(node.name) is not None:
-      self.error(node.lineno, "redefining variable "+node.name+" is not allowed")
-    else :
-      self.check(node.typename)
-      if node.length is not None :
-        self.check(node.length)
-      if node.expr is not None :
-        self.check(node.expr)
-      if isinstance(node.length,Float_type) and hasattr(node.length,'check_type') and hasattr(node.typename,'check_type'):
-        if node.length.check_type != node.typename.check_type :
-          self.error(node.lineno,'Range has wrong type')
-      self.table_current.symbols[node.name] = node
-      if hasattr(node.typename, "check_type"):
-        node.check_type = node.typename.check_type
-    #node.scope_level = self.environment.scope_level()
+  # def check_TypeDeclaration(self,node):
+  #   if self.table_current.lookup(node.name) is not None:
+  #     self.error(node.lineno, "redefining variable "+node.name+" is not allowed")
+  #   else :
+  #     self.check(node.typename)
+  #     if node.length is not None :
+  #       self.check(node.length)
+  #     if node.expr is not None :
+  #       self.check(node.expr)
+  #     if isinstance(node.length,Float_type) and hasattr(node.length,'check_type') and hasattr(node.typename,'check_type'):
+  #       if node.length.check_type != node.typename.check_type :
+  #         self.error(node.lineno,'Range has wrong type')
+  #     self.table_current.symbols[node.name] = node
+  #     if hasattr(node.typename, "check_type"):
+  #       node.check_type = node.typename.check_type
 
-  def check_SubTypeDeclaration(self,node):
-    # if not self.inside_function():
-    #     error(node.lineno, "Cannot do subtype declaration statement outside function body")
-    #     return
-    if self.table_current.lookup(node.name) is not None:
-      self.error(node.lineno, "redefining variable "+node.name+" is not allowed")
-    else :
-      p=self.table_current.lookup(node.typename.name)
-      if isinstance(p,TypeDeclaration) :
-        node.expr = p.expr
-        node.typename = p.typename
-        self.check(node.typename)
-        if node.length is not None :
-          self.check(node.length)
-        if node.expr is not None :
-          self.check(node.expr)
-        self.table_current.symbols[node.name] = node
-        if hasattr(node.typename, "check_type"):
-          node.check_type = node.typename.check_type
-      else :
-        self.error(node.lineno, "Type is not valid")
-    #node.scope_level = self.environment.scope_level()
+  # def check_SubTypeDeclaration(self,node):
+  #   if self.table_current.lookup(node.name) is not None:
+  #     self.error(node.lineno, "redefining variable "+node.name+" is not allowed")
+  #   else :
+  #     p=self.table_current.lookup(node.typename.name)
+  #     if isinstance(p,TypeDeclaration) :
+  #       node.expr = p.expr
+  #       node.typename = p.typename
+  #       self.check(node.typename)
+  #       if node.length is not None :
+  #         self.check(node.length)
+  #       if node.expr is not None :
+  #         self.check(node.expr)
+  #       self.table_current.symbols[node.name] = node
+  #       if hasattr(node.typename, "check_type"):
+  #         node.check_type = node.typename.check_type
+  #     else :
+  #       self.error(node.lineno, "Type is not valid")
 
 
   def check_Integertype(self, node):
-    # if not self.inside_function():
-    #   error(node.lineno, "Cannot define an integer outside function body")
-    # else:
-    if node.range_spec is not None:
-      self.check(node.range_spec)
+    if node.rangespec is not None:
+      self.check(node.rangespec)
     else:
       self.check(node.expression)
 
   def check_Floattype(self, node):
-    # if not self.inside_function():
-    #   error(node.lineno, "Cannot define an float outside function body")
-    # node.scope_level = self.environment.scope_level()
-    if node.range_spec_opt is not None:
-      self.check(node.range_spec_opt)
-      if hasattr(node.range_spec_opt,'check_type'):
-        node.check_type = node.range_spec_opt.check_type
+    if node.rangespecopt is not None:
+      self.check(node.rangespecopt)
+      if hasattr(node.rangespecopt,'check_type'):
+        node.check_type = node.rangespecopt.check_type
     self.check(node.expression)
 
   def checkt_Fixedtype(self, node):
-    #node.scope_level = self.environment.scope_level()
-    if node.range_spec_opt is not None:
-      self.check(node.range_spec_opt)
-    self.check(node.expression_1)
-    self.check(node.expression_2)
+    if node.rangespecopt is not None:
+      self.check(node.rangespecopt)
+    self.check(node.expression1)
+    self.check(node.expression2)
 
-  def check_Unconstr_array(self,node):
-    # if not self.inside_function():
-    #   error(node.lineno, "Cannot define an array outside function body")
-    #   return
-    for index in node.index_s.index_s :
+  def check_Unconstrarray(self,node):
+    for index in node.indexs.indexs :
       self.check(index)
-    self.check(node.subtype_ind)
-    node.check_type = node.subtype_ind.check_type
+    self.check(node.subtypeind)
+    node.check_type = node.subtypeind.check_type
 
-  def check_Constr_array(self,node):
-    # if not self.inside_function():
-    #   error(node.lineno, "Cannot define an array outside function body")
-    #   return
-    for drange in node.index_constraint :
+  def check_Constrarray(self,node):
+    for drange in node.indexconstraint :
       if drange[0] is not None :
         self.check(drange[0])
       self.check(drange[1])
@@ -374,8 +308,8 @@ class typecheck():
         if hasattr(drange[0],'check_type') and hasattr(drange[1],'check_type'):
           if drange[0].check_type != drange[1].check_type :
             self.error(node.lineno, "Type Mismatch "+node.location.name)
-    self.check(node.subtype_ind)
-    node.check_type = node.subtype_ind.check_type
+    self.check(node.subtypeind)
+    node.check_type = node.subtypeind.check_type
 
   def check_Typename(self,node):
     if node.name not in self.types.keys():
@@ -416,7 +350,7 @@ class typecheck():
     valtype = type(node.value)
     check_type = typemap.get(valtype, None)
     if check_type is None:
-      error(node.lineno, "Using unrecognized type {}".format(valtype))
+      self.error(node.lineno, "Using unrecognized type {}".format(valtype))
     if check_type==self.Str and len(node.value)==1 :
       check_type = self.Char
     node.check_type = check_type
@@ -438,8 +372,7 @@ class typecheck():
         if hasattr(node,'check_type') :
           node.check_type = argument.check_type
 
-  def check_Doubledot_range(self,node):
-    #node.scope_level = self.environment.scope_level()
+  def check_Doubledotrange(self,node):
     self.check(node.left)
     self.check(node.right)
     if hasattr(node.left, "check_type") and hasattr(node.right, "check_type"):
@@ -448,7 +381,7 @@ class typecheck():
       else :
         self.error(node.lineno,"Type does not match")
 
-  def check_Name_tick(self,node):
+  def check_Nametick(self,node):
     self.check(node.name)
     if node.expression != None :
       self.check(node.expression)
@@ -457,25 +390,13 @@ class typecheck():
 
 
   def check_FuncStatement(self, node):
-    #TODO what is driverfunction?
-    #global hasDriverFunction
-    # filepath = sys.argv[1]
-    # fs, ld = filepath.rfind('/'), filepath.rfind('.')
-    # name = filepath[fs+1:ld]
-    # if node.name == name:
-    #     hasDriverFunction = True
-    #node.scope_level = self.environment.scope_level()
-    # if node.scope_level > 1:
-    #     error(node.lineno, "Nested functions not implemented")
     self.table_current = symtable(self.table_current, node)
     if self.table_current.lookup(node.name) is not None:
       self.error(node.lineno, "Redefining function "+node.name+"is not allowed")
     else :
       if node.id!=None and node.name != node.id :
         self.error(node.lineno, "Label does not match")
-      #TODO check why add_root is needed
       self.table_current.parent.symbols[node.name] = node
-      #self.environment.add_root(node.name, node)
     if node.returntype is not None :
       self.check(node.returntype)
       if hasattr(node.returntype, "check_type"):
@@ -496,20 +417,13 @@ class typecheck():
 
   def check_FuncParameter(self, node):
     self.table_current.symbols[node.name] = node
-    #node.scope_level = self.environment.scope_level()
     self.check(node.typename)
     node.check_type = node.typename.check_type 
 
   def check_ProcCall(self, node):
-    # if not self.inside_function():
-    #   error(node.lineno, "Cannot call function from outside function body; see main() for entry point")
-    #   return
     self.check(node.name)
 
   def check_FuncCall(self, node):
-    # if not self.inside_function():
-    #     error(node.lineno, "Cannot call function from outside function body; see main() for entry point")
-    #     return
     table_entry = self.table_current.lookup(node.name)
     if not table_entry:
       if node.name == 'PUT':
@@ -594,7 +508,7 @@ class typecheck():
         errside = "RHS"
       if errside is not None:
         self.error(node.lineno, "Relational operator "+op+" not supported on "+errside+" of expression")
-      return BoolType
+      return self.Bool
 
 
 
