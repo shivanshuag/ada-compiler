@@ -342,6 +342,9 @@ class typecheck():
   def check_LoadLocation(self, node):
     if node.location.name == 'NEWLINE':
       return
+    elif node.location.name[0] == '"' and node.location.name[-1] == '"':
+      node.check_type = self.Str
+      return
     table_entry = self.table_current.lookup(node.location.name)
     if not table_entry:
       self.error(node.lineno, "name "+node.location.name+" not found")
@@ -466,7 +469,7 @@ class typecheck():
         else:
           if node.arguments is not None:
             if len(table_entry.parameters.parameters) != len(node.arguments.arguments):
-              self.error(node.lineno, "Number of arguments for function call "+node.name+" do not match function declaration on line"+ table_entry.lineno)
+              self.error(node.lineno, "Number of arguments for function call "+node.name+" do not match function declaration")
             self.check(node.arguments)
             argerrors = False
             for arg, parm in zip(node.arguments.arguments, table_entry.parameters.parameters):
