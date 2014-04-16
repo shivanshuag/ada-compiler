@@ -10,6 +10,8 @@ from symbol import *
 import adalex
 import adaparse
 
+
+
 class typecheck():
   Int = Integer()
   Float = Float()
@@ -28,6 +30,8 @@ class typecheck():
    "ENUMERATION": Enum
   }
 
+  type_check_errors = 0
+  scope_level = 0
   def check_goal_symbol(self,node):
     self.table_current = symtable(None, node)
     if hasattr(node, "compilation"):
@@ -39,13 +43,14 @@ class typecheck():
     for comp_unit in node.comp_unit:
       self.check(comp_unit)
 
-  def check_comp_unit(self,node):
-    node.table = symtable(self.table_current, node)
-    self.table_current = node.table
-    for statement in node.statements.statements:
-      self.check(statement)
-    if isinstance(statement, AssignmentStatement):
-      self.table_current[statement.location.name] = statement.expr
+  # def check_comp_unit(self,node):
+  #   print node
+  #   node.table = symtable(self.table_current, node)
+  #   self.table_current = node.table
+  #   for statement in node.statements.statements:
+  #     self.check(statement)
+  #   if isinstance(statement, AssignmentStatement):
+  #     self.table_current[statement.location.name] = statement.expr
 
 
   def check_AssignmentStatement(self,node):
@@ -165,8 +170,9 @@ class typecheck():
 
 
   def check_Forloop(self,node):
-    #self.environment.push(node)
+    node.scope_level = self.scope_level
     self.table_current = symtable(self.table_current, node)
+    self.scope_level += 1
     self.check(node.name)
     self.table_current.parent.symbols[node.name.name] = node.name
     self.check(node.discreterange)
@@ -176,6 +182,7 @@ class typecheck():
       else :
         self.error(node.lineno, "Expression in for statement must evaluate to bool")
     self.table_current = self.table_current.parent
+    self.scope_level -=1
 
   def check_WhileStatement(self, node):
     flag = 1
@@ -189,12 +196,14 @@ class typecheck():
     if flag != 0 :
       self.table_current.symbols[node.label] = node
     self.table_current = symtable(self.table_current, node)
+    self.scope_level += 1
     self.check(node.expr)
     if node.expr != None :
       if node.expr.check_type != self.Bool:
         self.error(node.lineno, "Expression in while statement must evaluate to bool")
     self.check(node.truebranch)
     self.table_current = self.table_current.parent
+    self.scope_level -= 1
 
   def check_Block(self,node):
     flag = 1
@@ -206,12 +215,14 @@ class typecheck():
         if node.id!=None and node.label != node.id :
           self.error(node.lineno, "Label "+node.label+" does not match")
     self.table_current = symtable(self.table_current, node)
+    self.scope_level += 1
     if flag != 0 :
        self.table_current.symbols[node.label] = node
     for declarations in node.decl:
       self.check(declarations)
     self.check(node.block)
     self.table_current = self.table_current.parent
+    self.scope_level -= 1
 
 
   def check_VariableDeclaration(self,node):
@@ -237,6 +248,7 @@ class typecheck():
       self.table_current.symbols[node.name] = node
       if hasattr(node.typename, "check_type"):
         node.check_type = node.typename.check_type
+    node.scope_level = self.scope_level
 
   # def check_TypeDeclaration(self,node):
   #   if self.table_current.lookup(node.name) is not None:
@@ -281,6 +293,7 @@ class typecheck():
       self.check(node.expression)
 
   def check_Floattype(self, node):
+    node.scope_level = self.scope_level
     if node.rangespecopt is not None:
       self.check(node.rangespecopt)
       if hasattr(node.rangespecopt,'check_type'):
@@ -288,6 +301,7 @@ class typecheck():
     self.check(node.expression)
 
   def checkt_Fixedtype(self, node):
+    node.scope_level = self.scope_level
     if node.rangespecopt is not None:
       self.check(node.rangespecopt)
     self.check(node.expression1)
@@ -373,6 +387,7 @@ class typecheck():
           node.check_type = argument.check_type
 
   def check_Doubledotrange(self,node):
+    node.scope_level = self.scope_level
     self.check(node.left)
     self.check(node.right)
     if hasattr(node.left, "check_type") and hasattr(node.right, "check_type"):
@@ -390,7 +405,10 @@ class typecheck():
 
 
   def check_FuncStatement(self, node):
+    node.scope_level = self.scope_level
     self.table_current = symtable(self.table_current, node)
+    self.scope_level += 1
+
     if self.table_current.lookup(node.name) is not None:
       self.error(node.lineno, "Redefining function "+node.name+"is not allowed")
     else :
@@ -406,6 +424,7 @@ class typecheck():
       self.check(declarations)
     self.check(node.statements)
     self.table_current = self.table_current.parent
+    self.scope_level -= 1
 
   def check_Statements(self, node):
     for statement in node.statements:
@@ -416,6 +435,7 @@ class typecheck():
       self.check(parameter)
 
   def check_FuncParameter(self, node):
+    node.scope_level = self.scope_level
     self.table_current.symbols[node.name] = node
     self.check(node.typename)
     node.check_type = node.typename.check_type 
@@ -447,11 +467,9 @@ class typecheck():
           if node.arguments is not None:
             if len(table_entry.parameters.parameters) != len(node.arguments.arguments):
               self.error(node.lineno, "Number of arguments for function call "+node.name+" do not match function declaration on line"+ table_entry.lineno)
-#changed
             self.check(node.arguments)
             argerrors = False
             for arg, parm in zip(node.arguments.arguments, table_entry.parameters.parameters):
-              #print arg
               if arg.check_type != parm.typename.check_type:
                 self.error(node.lineno, "Argument type "+arg.check_type.name+" does not match parameter type "+parm.check_type.name+" in function call to "+ node.name)
                 argerrors = True
@@ -515,7 +533,11 @@ class typecheck():
 
 
   def error(self, lineno, msg):
+    self.type_check_errors = self.type_check_errors + 1
     print("type error on line number "+str(lineno)+": "+msg)
+
+  def get_error_count(self):
+    return self.type_check_errors
 
   def check(self, node):
     if node is not None:

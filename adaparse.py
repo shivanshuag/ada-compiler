@@ -9,6 +9,9 @@ import adalex
 import ply.yacc as yacc
 from ast import *
 
+parse_error = 0
+
+
 def p_goal_symmbol(t):
   'goal_symbol : compilation'
   t[0] = goal_symbol(t[1], lineno=t.lexer.lineno)
@@ -1364,6 +1367,8 @@ def p_error(t):
     print 'Syntax error on'+str(t)
   else :
     print 'Syntax error on EOF'
+  global parse_error
+  parse_error = parse_error + 1
 
 def make_parser():
   return yacc.yacc()
