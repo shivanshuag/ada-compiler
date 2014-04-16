@@ -880,10 +880,6 @@ def p_param2(t):
   'param : error'
   pass
 
-
-def p_mode(t):
-  'mode : '
-  t[0] = None
 def p_mode(t):
   '''mode :
           | IN
@@ -1085,17 +1081,20 @@ def p_comp_assoc(t):
   pass
 
 def p_choice_s(t):
-  '''choice_s : choice
-              | choice_s BAR choice
-              '''
-  pass
+  'choice_s : choice'
+  t[0]=Choices([t[1]], lineno=t.lexer.lineno)
+
+def p_choice_s1(t):
+  'choice_s : choice_s BAR choice'
+  t[0]=t[1]
+  t[0].append(t[2])
 
 def p_choice(t):
   '''choice : expression
             | discrete_with_range
             | OTHERS
             '''
-  pass
+  t[0] = t[1]
 
 def p_discrete_with_range1(t):
   'discrete_with_range : name range_constraint'

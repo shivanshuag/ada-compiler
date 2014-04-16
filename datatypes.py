@@ -61,3 +61,7 @@ class Array():
 class Enumeration():
   name = "Enum"
   default = None
+
+class Undeclared():
+  name = "Undeclared"
+  default = None

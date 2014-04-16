@@ -12,12 +12,14 @@ class symtable():
 		self.astnode = astnode
 	def lookup(self, name):
 		table = self
-		while table.parent != None:
+		while table != None:
 			if name in table.symbols.keys():
 				return table.symbols[name]
 			table = table.parent
+
 		return None	
-	def return_type():
+
+	def return_type(self):
 		if self.astnode:
 			if self.astnode.returntype != None:
 				return self.astnode.returntype.check_type

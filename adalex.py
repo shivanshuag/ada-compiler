@@ -238,10 +238,60 @@ t_TAB = r'\t'
 t_BRA_OPEN = r'\('
 t_BRA_CLOSE = r'\)'
 
-@TOKEN(number)
+# @TOKEN(decimal)
+# def t_DECIMAL(t):
+#   t.value = t.value.replace('_','')
+#   if '.' in t.value:
+#     t.value = float(t.value)
+#   else:
+#     t.value = int(t.value)
+#   return t
+
+# @TOKEN(base_number)
+# def t_BASE_NUMBER(t):
+
+
+# @TOKEN(number)
+# def t_NUMBER(t):
+#   t.value = t.value.upper()
+#   return t
+
+def __is_valid(x, base):
+    a = "0123456789abcdef"
+    c = a[0:base]
+    p = r"[^" + c + "_.]+"
+    if re.search(p, x, re.I) != None:
+            return False
+    return True
+
 def t_NUMBER(t):
-  t.value = t.value.upper()
-  return t
+    r'(?:(?:[0-9](_?[0-9])*\#[0-9a-fA-F](_?[0-9a-fA-F])*(\.?[0-9a-fA-F](_?[0-9a-fA-F])*)?\#([Ee][+\-]?[0-9](_?[0-9])*)?)|[0-9](_?[0-9])*(?:(?:\.[0-9](_?[0-9])*([Ee][+\-]?[0-9](_?[0-9])*)?)|(?:([Ee][+\-]?[0-9](_?[0-9])*)?)))'
+    t.value = t.value.replace('_','')
+    if '#' in t.value:
+        h1 = t.value.index('#')
+        h2 = h1 + t.value[h1+1:].index('#') + 1
+        base, num, exp = t.value[0:h1], t.value[h1+1:h2], t.value[h2+1:]
+        ##print base, num, exp
+        if exp !=None and len(exp) > 0:
+            exp = exp[1:]
+            exp = int(exp)
+        else: exp = 0
+        base = int(base)
+        if base <= 1 or base > 16: print "WARNING: Invalid base of the number used"
+        if __is_valid(num, base) == False:
+            print "WARNING: Incorrect symbols used in the number with base",base
+        if '.' not in num:
+            #its a integer
+            num = int(num, base)
+            t.value = num*pow(base, exp)
+    elif '.' in t.value or 'e' in t.value or 'E' in t.value:
+        t.value = float(t.value)
+    else:
+        t.value = int(t.value)
+    return t
+
+
+
 @TOKEN(identifier)
 def t_IDENTIFIER(t):
   t.value = t.value.upper()

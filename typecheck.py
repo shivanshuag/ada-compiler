@@ -150,15 +150,16 @@ class typecheck():
     # if not self.inside_function():
     #   error(node.lineno, "Cannot define an case outside function body")
     #   return
+    #print node.condition
     self.check(node.condition)
     for alternative in node.alternatives.alternatives :
-      if alternative.choices.choices[0] != 'others':
+      if alternative.choices.choices[0] != 'OTHERS':
         self.check(alternative)
         if hasattr(node.condition,'check_type') and hasattr(alternative,'check_type') :
           if node.condition.check_type  != alternative.check_type :
             self.error(node.lineno, "Type of condition and choice should match")
-          else :
-            self.error(node.lineno, "No type assigned to node")
+        else :
+          self.error(node.lineno, "No type assigned to node")
       else:
           self.check(alternative.statements)
 
@@ -396,6 +397,7 @@ class typecheck():
     table_entry = self.table_current.lookup(node.location.name)
     if not table_entry:
       self.error(node.lineno, "name "+node.location.name+" not found")
+      node.check_type = Undeclared()
     else:
       # if not isinstance(table_entry, Integer) and not isinstance(table_entry, Float) and not isinstance(table_entry, Boolean) and not isinstance(table_entry, Array) and not isinstance(table_entry, String) and not isinstance(table_entry, Enumeration) and not isinstance(table_entry, Character):
       #   self.error(node.lineno, "cannot use "+table_entry.typename.name+" outside of variable declarations")
@@ -480,7 +482,6 @@ class typecheck():
         node.check_type = node.returntype.check_type
     self.check(node.parameters)
     for declarations in node.declpart:
-      print declarations.__class__.__name__
       self.check(declarations)
     self.check(node.statements)
     self.table_current = self.table_current.parent
@@ -518,13 +519,13 @@ class typecheck():
           else:
 #                        if hasattr(node.arguments.arguments[0],'location') and node.arguments.arguments[0].location.name != 'newline':
             self.check(node.arguments)
-        else:
-          self.error(node.lineno, "Function name "+node.name+" not found")
+      else:
+        self.error(node.lineno, "Function name "+node.name+" not found")
     else :
       if hasattr(table_entry,'check_type'):
         node.check_type = table_entry.check_type
-        if node.check_type == Arr: 
-          node.check_type = Int
+        if node.check_type == self.Arr: 
+          node.check_type = self.Int
           node.isArray = True
         elif not isinstance(table_entry, FuncStatement):
           self.error(node.lineno, "Tried to call non-function "+node.name)
@@ -536,8 +537,9 @@ class typecheck():
             self.check(node.arguments)
             argerrors = False
             for arg, parm in zip(node.arguments.arguments, table_entry.parameters.parameters):
+              #print arg
               if arg.check_type != parm.typename.check_type:
-                self.error(node.lineno, "Argument type "+arg.check_type.typename+" does not match parameter type "+parm.check_type.typename+" in function call to "+ node.name)
+                self.error(node.lineno, "Argument type "+arg.check_type.name+" does not match parameter type "+parm.check_type.name+" in function call to "+ node.name)
                 argerrors = True
               if argerrors:
                 return
@@ -562,36 +564,36 @@ class typecheck():
 
   def check_type_unary(self, node, op, val):
     if hasattr(val, "check_type"):
-      if op not in val.check_type.unary_ops:
+      if op not in val.check_type.unary:
         error(node.lineno, "Unary operator "+op+" not supported")
       return val.check_type
 
   def check_type_binary(self, node, op, left, right):
     if hasattr(left, "check_type") and hasattr(right, "check_type"):
       if left.check_type != right.check_type:
-        error(node.lineno, "Binary operator "+op+" does not have matching LHS/RHS types")
+        self.error(node.lineno, "Binary operator "+op+" does not have matching LHS/RHS types")
         return left.check_type
       errside = None
-      if op not in left.check_type.binary_ops:
+      if op not in left.check_type.binary:
         errside = "LHS"
-      if op not in right.check_type.binary_ops:
+      if op not in right.check_type.binary:
         errside = "RHS"
       if errside is not None:
-        error(node.lineno, "Binary operator "+op+" not supported on "+errside+" of expression")
+        self.error(node.lineno, "Binary operator "+op+" not supported on "+errside+" of expression")
       return left.check_type
 
   def check_type_rel(self, node, op, left, right):
     if hasattr(left, "check_type") and hasattr(right, "check_type"):
       if left.check_type != right.check_type:
-        error(node.lineno, "Relational operator "+op+" does not have matching LHS/RHS types")
+        self.error(node.lineno, "Relational operator "+op+" does not have matching LHS/RHS types")
         return left.check_type
       errside = None
-      if op not in left.check_type.rel_ops:
+      if op not in left.check_type.rel:
         errside = "LHS"
-      if op not in right.check_type.rel_ops:
+      if op not in right.check_type.rel:
         errside = "RHS"
       if errside is not None:
-        error(node.lineno, "Relational operator "+op+" not supported on "+errside+" of expression")
+        self.error(node.lineno, "Relational operator "+op+" not supported on "+errside+" of expression")
       return BoolType
 
 
@@ -618,7 +620,7 @@ def tracefunc(frame, event, arg, indent=[0]):
       return tracefunc
 
 import sys
-sys.settrace(tracefunc)
+#sys.settrace(tracefunc)
 
 
 def main():
