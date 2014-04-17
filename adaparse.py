@@ -1,7 +1,7 @@
 # -----------------------------------------------------------------------------
 # adaparse.py
 #
-# Simple parser for ADA 95.  Based on the grammar from ADA Reference Manual
+# Simple parser for ADA 95
 # -----------------------------------------------------------------------------
 
 import sys
@@ -286,7 +286,6 @@ def p_alternative_s1(t):
 def p_alternative(t):
   'alternative : WHEN choice_s RIGHT_SHAFT statement_s'
   t[0]=Alternative(t[2],t[4],lineno=t.lineno(1))
-  print t.lineno(1)
 
   pass
 
@@ -945,7 +944,7 @@ def p_body(t):
 
 def p_subprog_body(t): #chalu
   'subprog_body : subprog_spec IS decl_part block_body END id_opt SEMI_COLON'
-  t[0]=FuncStatement(t[1][0],t[1][1],t[1][2],t[3],t[4],t[6], lineno=t.lineno(4));
+  t[0]=FuncStatement(t[1][0],t[1][1],t[1][2],t[3],t[4],t[6], lineno=t.lineno(5));
 
 
 def p_end_subprog(t):
@@ -1153,7 +1152,7 @@ def p_relation3(t):
 
 def p_simple_expression1(t): #donedonedone
   'simple_expression : unary term'
-  t[0] = Unaryop(t[1],t[2], lineno=t.lineno(2))
+  t[0] = Unaryop(t[1],t[2], lineno=t.lexer.lineno)
 
   #t[0] = ['UnaryOpExp', t[2][1], t.lineno, t[1], t[2]]
   pass
@@ -1165,7 +1164,7 @@ def p_simple_expression2(t):
 
 def p_simple_expression3(t):
   'simple_expression : simple_expression adding term'
-  t[0] = Binop(t[2],t[1],t[3], lineno=t.lineno(2))
+  t[0] = Binop(t[2],t[1],t[3], lineno=t.lexer.lineno)
 
   # if(t[1][1].name != t[3][1].name):
   #   print "type error on line number "+str(t.lineno)+": incompatible types "+t[1][1].name+"and "+t[3][1].name
@@ -1199,7 +1198,7 @@ def p_term1(t): #donedone
 
 def p_term2(t):
   'term : term multiplying factor'
-  t[0] = Binop(t[2],t[1],t[3], lineno=t.lineno(2))
+  t[0] = Binop(t[2],t[1],t[3], lineno=t.lexer.lineno)
  
   # if(t[1][1].name != t[3][1].name):
   #   print "type error on line number "+str(t.lineno)+": incompatible types "+t[1][1].name+"and "+t[3][1].name
@@ -1382,9 +1381,6 @@ def main():
   f = open(fileName, 'r')
   parser = make_parser()
   result = parser.parse(f.read())
-  for depth,node in flatten(result):
-    print("%s%s" % (" "*(4*depth),node))  
-
 
 DEBUG = 0
 lexer = adalex.make_lexer()

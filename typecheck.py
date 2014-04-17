@@ -38,6 +38,7 @@ class typecheck():
       self.check_compilation(node.compilation)
     else:
       print "Please fix all the syntax errors and compile again"
+      sys.exit(0)
 
   def check_compilation(self, node):
     for comp_unit in node.comp_unit:

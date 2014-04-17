@@ -13,13 +13,6 @@ class ast():
     for name,value in kwargs.items():
       setattr(self,name,value)
     self.depth = 1
-  def __repr__(self):
-    excluded = {"lineno", "depth"}
-    dt = '\t'*self.depth
-    return "{}[\n{}{}\n]".format(self.__class__.__name__, dt,
-      {key: value 
-       for key, value in vars(self).items() 
-        if not key.startswith("_") and not key in excluded and value is not None})
 
 
 #All the classes below inherit the ast class. Each class defines a list of fields for the ast node.
@@ -237,39 +230,3 @@ class ExitStatement(ast):
 
 class GotoStatement(ast):
   fields = ['name']
-
-class NodeVisitor(object):
-  def visit(self,node):
-    if node:
-      method = 'visit_' + node.__class__.__name__
-      visitor = getattr(self, method, self.generic_visit)
-      return visitor(node)
-    else:
-      return None
-    
-  def generic_visit(self,node):
-    for field in getattr(node,"fields"):
-      value = getattr(node,field,None)
-      if isinstance(value, list):
-        for item in value:
-          if isinstance(item,ast):
-            self.visit(item)
-      elif isinstance(value, ast):
-        self.visit(value)
-
-
-
-def flatten(top):
-    class Flattener(NodeVisitor):
-        def __init__(self):
-            self.depth = 0
-            self.nodes = []
-        def generic_visit(self,node):
-            self.nodes.append((self.depth,node))
-            self.depth += 1
-            NodeVisitor.generic_visit(self,node)
-            self.depth -= 1
-
-    d = Flattener()
-    d.visit(top)
-    return d.nodes
